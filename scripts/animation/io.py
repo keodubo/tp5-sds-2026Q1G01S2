@@ -180,3 +180,25 @@ def _read_csv_rows(path: Path, expected_header: list[str]) -> list[dict[str, str
                 )
             rows.append(row)
         return rows
+
+
+from .model import RunData
+
+
+def load_run(run_dir: Path, require_graph: bool) -> RunData:
+    from .graph import build_graph_from_adjacency
+
+    metadata = read_metadata(run_dir)
+    observables = read_observables(run_dir)
+    states = read_states(run_dir, metadata.n)
+    graph_data = None
+    if require_graph:
+        graph_data = build_graph_from_adjacency(run_dir, metadata.n)
+    elif (run_dir / "adjacency.csv").exists():
+        graph_data = build_graph_from_adjacency(run_dir, metadata.n)
+    return RunData(
+        metadata=metadata,
+        observables=observables,
+        states=states,
+        graph_data=graph_data,
+    )
