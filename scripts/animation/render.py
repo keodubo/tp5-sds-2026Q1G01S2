@@ -8,9 +8,11 @@ matplotlib.use("Agg")
 
 import matplotlib.pyplot as plt
 from matplotlib.animation import FuncAnimation
+import networkx as nx
 import numpy as np
 
 from .cli import PlannedOutputPaths
+from .graph import compute_layout
 from .model import AnimationInputError, RenderOptions, RunData
 
 
@@ -86,6 +88,90 @@ def render_dashboard(run: RunData, options: RenderOptions, paths: PlannedOutputP
         animation.save(paths.dashboard_mp4, writer="ffmpeg", fps=options.fps, dpi=options.dpi)
         update(rep_index)
         fig.savefig(paths.dashboard_png, dpi=options.dpi)
+    finally:
+        plt.close(fig)
+
+
+def render_network(run: RunData, options: RenderOptions, paths: PlannedOutputPaths) -> None:
+    ensure_ffmpeg_available()
+    if run.graph_data is None:
+        raise AnimationInputError(
+            "adjacency.csv not found in run directory. Network animation requires --save-adjacency."
+        )
+    paths.run_dir.mkdir(parents=True, exist_ok=True)
+
+    graph = run.graph_data.graph
+    edge_count = run.graph_data.edge_count
+    frame_indices = selected_frame_indices(run.states.frame_count, options.frame_stride)
+    rep_index = representative_frame_index(run.states.t, options.representative_time)
+
+    if options.layout == "spring" and (run.metadata.n > 200 or edge_count > 20000):
+        print(
+            f"WARNING: spring layout may be slow for N={run.metadata.n}, edge_count={edge_count}",
+            flush=True,
+        )
+    if options.directed_edges and edge_count > 20000:
+        print(
+            f"WARNING: directed arrows may be illegible for edge_count={edge_count}",
+            flush=True,
+        )
+    print(
+        f"Rendering network: N={run.metadata.n}, edge_count={edge_count}, frames={len(frame_indices)}, output={paths.network_mp4}",
+        flush=True,
+    )
+
+    positions = compute_layout(graph, options.layout, seed=run.metadata.run_seed)
+    vmin = float(np.min(run.states.v))
+    vmax = float(np.max(run.states.v))
+    if vmin == vmax:
+        vmin -= 0.5
+        vmax += 0.5
+
+    edge_alpha = options.edge_alpha
+    if edge_alpha is None:
+        edge_alpha = 0.08 if edge_count > 20000 else 0.20
+
+    fig, axis = plt.subplots(figsize=(8, 8), constrained_layout=True)
+    axis.set_axis_off()
+    axis.set_title(_title(run, "Network"))
+
+    edge_draw_options = {"arrowsize": 4} if options.directed_edges else {}
+    nx.draw_networkx_edges(
+        graph,
+        positions,
+        ax=axis,
+        arrows=options.directed_edges,
+        alpha=edge_alpha,
+        width=options.edge_width,
+        edge_color="#555555",
+        **edge_draw_options,
+    )
+    nodes = nx.draw_networkx_nodes(
+        graph,
+        positions,
+        ax=axis,
+        node_color=run.states.v[0],
+        cmap=options.colormap,
+        vmin=vmin,
+        vmax=vmax,
+        node_size=options.node_size,
+        linewidths=0.0,
+    )
+    colorbar = fig.colorbar(nodes, ax=axis, shrink=0.75)
+    colorbar.set_label("v_i(t)")
+    time_text = axis.text(0.02, 0.98, "", transform=axis.transAxes, va="top")
+
+    def update(frame_index: int):
+        t = float(run.states.t[frame_index])
+        nodes.set_array(run.states.v[frame_index])
+        time_text.set_text(f"t={t:.3f}")
+        return nodes, time_text
+
+    try:
+        animation = FuncAnimation(fig, update, frames=frame_indices, blit=False)
+        animation.save(paths.network_mp4, writer="ffmpeg", fps=options.fps, dpi=options.dpi)
+        update(rep_index)
+        fig.savefig(paths.network_png, dpi=options.dpi)
     finally:
         plt.close(fig)
 
