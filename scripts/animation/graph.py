@@ -34,5 +34,10 @@ def compute_layout(graph: nx.DiGraph, layout: str, seed: int) -> dict[int, objec
     if layout == "circular":
         return nx.circular_layout(graph)
     if layout == "spring":
-        return nx.spring_layout(graph, seed=seed)
+        return nx.spring_layout(graph, seed=_networkx_seed(seed))
     raise AnimationInputError(f"unsupported layout: {layout}")
+
+
+def _networkx_seed(seed: int) -> int:
+    # NetworkX delegates integer seeds to NumPy, whose accepted range differs from Java long.
+    return seed % (2**32)

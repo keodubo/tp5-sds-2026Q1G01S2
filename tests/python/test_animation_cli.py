@@ -283,6 +283,39 @@ def test_cli_dashboard_only_works_without_adjacency(tmp_path):
     assert (run_output / "dashboard.mp4").exists()
 
 
+def test_cli_all_omits_network_and_generates_dashboard_without_adjacency(tmp_path):
+    run_dir = tmp_path / "run"
+    output_dir = tmp_path / "renders"
+    write_tiny_run(run_dir, include_adjacency=False)
+
+    result = subprocess.run(
+        [
+            sys.executable,
+            "scripts/animate_fhn.py",
+            "--run-dir",
+            str(run_dir),
+            "--output-dir",
+            str(output_dir),
+            "--fps",
+            "2",
+            "--dpi",
+            "80",
+            "--overwrite",
+        ],
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+
+    assert result.returncode == 0, result.stderr
+    assert "SKIP network: adjacency.csv not found" in result.stdout
+    run_output = output_dir / "ring_k_01_K_0.20_seed_0001"
+    assert not (run_output / "network.mp4").exists()
+    assert not (run_output / "network_frame.png").exists()
+    assert (run_output / "dashboard.mp4").exists()
+    assert (run_output / "dashboard_frame.png").exists()
+
+
 def test_cli_reports_missing_states(tmp_path):
     run_dir = tmp_path / "run"
     write_tiny_run(run_dir)

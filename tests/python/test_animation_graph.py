@@ -71,6 +71,27 @@ def test_compute_spring_layout_is_deterministic_with_same_seed():
         assert first[node].tolist() == second[node].tolist()
 
 
+@pytest.mark.parametrize("seed", [6081439319154255393, -8485422715239165622])
+def test_compute_spring_layout_accepts_java_long_seed(seed):
+    graph = nx.DiGraph()
+    graph.add_edges_from([(0, 1), (1, 2), (2, 0)])
+
+    first = compute_layout(graph, layout="spring", seed=seed)
+    second = compute_layout(graph, layout="spring", seed=seed)
+
+    assert first.keys() == second.keys()
+    for node in first:
+        assert first[node].tolist() == second[node].tolist()
+
+
+def test_compute_spring_layout_handles_tp_size_graph():
+    graph = nx.cycle_graph(501, create_using=nx.DiGraph)
+
+    positions = compute_layout(graph, layout="spring", seed=6081439319154255393)
+
+    assert set(positions) == set(range(501))
+
+
 def test_compute_layout_rejects_unknown_name():
     graph = nx.DiGraph()
     graph.add_node(0)

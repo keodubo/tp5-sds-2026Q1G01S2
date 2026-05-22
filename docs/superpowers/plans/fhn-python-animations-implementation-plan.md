@@ -6,7 +6,7 @@
 
 **Architecture:** The implementation is a small Python package under `scripts/animation/` plus a thin CLI wrapper at `scripts/animate_fhn.py`. Parsing, validation, graph construction, output naming, and rendering are separate modules so tests can assert public behavior without inspecting internals. The Java motor remains untouched.
 
-**Tech Stack:** Python 3.11+, standard `csv`/`argparse`/`pathlib`, `numpy`, `networkx`, `matplotlib`, `pytest`, Java/Maven motor only for smoke fixture generation.
+**Tech Stack:** Python 3.11+, standard `csv`/`argparse`/`pathlib`, `numpy`, `networkx`, `matplotlib`, `scipy`, `pytest`, Java/Maven motor only for smoke fixture generation.
 
 ---
 
@@ -124,6 +124,7 @@ matplotlib>=3.8,<4
 networkx>=3.2,<4
 numpy>=1.26,<3
 pytest>=8,<9
+scipy>=1.11,<2
 ```
 
 - [ ] **Step 3: Create the package marker**

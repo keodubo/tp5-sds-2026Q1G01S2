@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import argparse
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from pathlib import Path
 
 from .model import AnimationInputError, Metadata, RenderOptions
@@ -58,13 +58,13 @@ def main(argv: list[str] | None = None) -> int:
     args = parser.parse_args(argv)
     try:
         options = _options_from_args(args)
-        require_graph = options.only in ("network", "all")
         from .io import load_run, read_metadata
         from .render import render_dashboard, render_network
 
         metadata = read_metadata(args.run_dir)
         paths = output_paths(metadata, options)
-        planned = _planned_files(options.only, paths)
+        network_available = options.only != "all" or (args.run_dir / "adjacency.csv").exists()
+        planned = _planned_files(options.only, paths, network_available=network_available)
 
         if not options.overwrite:
             complete = [path for path in planned if path.exists() and path.stat().st_size > 0]
@@ -76,9 +76,21 @@ def main(argv: list[str] | None = None) -> int:
                 names = ", ".join(str(path) for path in existing)
                 raise AnimationInputError(f"partial outputs already exist without --overwrite: {names}")
 
+        require_graph = options.only == "network"
         run = load_run(args.run_dir, require_graph=require_graph)
+        if options.only == "all" and network_available:
+            from .graph import build_graph_from_adjacency
+
+            run = replace(run, graph_data=build_graph_from_adjacency(args.run_dir, run.metadata.n))
+        elif options.only == "all":
+            print(
+                "SKIP network: adjacency.csv not found; regenerate with --save-adjacency to produce network outputs.",
+                flush=True,
+            )
+
         if options.only in ("network", "all"):
-            render_network(run, options, paths)
+            if run.graph_data is not None:
+                render_network(run, options, paths)
         if options.only in ("dashboard", "all"):
             render_dashboard(run, options, paths)
         print(f"OK {paths.run_dir}")
@@ -116,9 +128,13 @@ def _options_from_args(args: argparse.Namespace) -> RenderOptions:
     )
 
 
-def _planned_files(only: str, paths: PlannedOutputPaths) -> list[Path]:
+def _planned_files(
+    only: str, paths: PlannedOutputPaths, *, network_available: bool = True
+) -> list[Path]:
     if only == "network":
         return [paths.network_mp4, paths.network_png]
     if only == "dashboard":
+        return [paths.dashboard_mp4, paths.dashboard_png]
+    if not network_available:
         return [paths.dashboard_mp4, paths.dashboard_png]
     return [paths.network_mp4, paths.network_png, paths.dashboard_mp4, paths.dashboard_png]
