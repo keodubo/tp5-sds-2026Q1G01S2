@@ -70,6 +70,7 @@ python >= 3.11
 matplotlib
 networkx
 numpy
+scipy
 ```
 
 Backend de video:
@@ -79,6 +80,8 @@ ffmpeg
 ```
 
 No se requiere `pandas` para v1. La lectura de CSV puede implementarse con `csv` de la biblioteca estandar y arrays de `numpy`.
+
+`scipy` queda declarado porque NetworkX lo usa internamente para `spring_layout` en grafos de 500 nodos o mas, que es el tamano minimo operativo del TP.
 
 ## Inputs
 

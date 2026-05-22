@@ -3,6 +3,11 @@ target/
 outputs/
 tmp/
 runs/
+renders/
+.venv/
+__pycache__/
+.pytest_cache/
+*.pyc
 *.mp4
 *.avi
 *.gif
