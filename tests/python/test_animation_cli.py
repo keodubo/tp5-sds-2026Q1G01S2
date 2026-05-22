@@ -7,6 +7,7 @@ import pytest
 from scripts.animation.cli import output_paths, parse_options
 from scripts.animation.io import load_run
 from scripts.animation.model import AnimationInputError
+from scripts.animation.render import render_dashboard
 
 
 def write_tiny_run(run_dir: Path, include_adjacency: bool = True) -> None:
@@ -149,3 +150,30 @@ def test_output_paths(tmp_path):
     assert paths.run_dir == tmp_path / "renders" / "ring_k_01_K_0.20_seed_0001"
     assert paths.network_mp4.name == "network.mp4"
     assert paths.dashboard_png.name == "dashboard_frame.png"
+
+
+def test_render_dashboard_outputs_mp4_and_png(tmp_path):
+    run_dir = tmp_path / "run"
+    write_tiny_run(run_dir)
+    run = load_run(run_dir, require_graph=False)
+    options = parse_options(
+        [
+            "--run-dir",
+            str(run_dir),
+            "--output-dir",
+            str(tmp_path / "renders"),
+            "--fps",
+            "2",
+            "--dpi",
+            "80",
+            "--overwrite",
+        ]
+    )
+    paths = output_paths(run.metadata, options)
+
+    render_dashboard(run, options, paths)
+
+    assert paths.dashboard_mp4.exists()
+    assert paths.dashboard_mp4.stat().st_size > 0
+    assert paths.dashboard_png.exists()
+    assert paths.dashboard_png.stat().st_size > 0
