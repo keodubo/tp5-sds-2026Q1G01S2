@@ -5,7 +5,7 @@ from pathlib import Path
 
 import numpy as np
 
-from .model import AnimationInputError, Metadata, Observables
+from .model import AnimationInputError, Metadata, Observables, States
 
 
 OBSERVABLES_HEADER = ["t", "mean_v", "sigma_v", "mean_w"]
@@ -75,6 +75,45 @@ def read_observables(run_dir: Path) -> Observables:
     )
 
 
+def read_states(run_dir: Path, n: int) -> States:
+    path = run_dir / "states.csv"
+    rows = _read_csv_rows(path, STATES_HEADER)
+    if not rows:
+        raise AnimationInputError(f"states.csv has no data rows in {run_dir}")
+
+    frames: dict[float, dict[int, tuple[float, float]]] = {}
+    for row_number, row in enumerate(rows, start=2):
+        t = _read_float(row, "t", path, row_number)
+        i = _read_int(row, "i", path, row_number)
+        v_value = _read_float(row, "v", path, row_number)
+        w_value = _read_float(row, "w", path, row_number)
+        if i < 0 or i >= n:
+            raise AnimationInputError(f"states.csv index out of range: {i}; expected 0..{n - 1}")
+        frame = frames.setdefault(t, {})
+        if i in frame:
+            raise AnimationInputError(f"duplicate state row at row {row_number}: t={t}, i={i}")
+        frame[i] = (v_value, w_value)
+
+    times = sorted(frames)
+    if len(times) < 2:
+        raise AnimationInputError("states.csv must contain at least two state frames to produce MP4")
+
+    v = np.zeros((len(times), n), dtype=float)
+    w = np.zeros((len(times), n), dtype=float)
+    for frame_index, t in enumerate(times):
+        frame = frames[t]
+        if len(frame) != n:
+            raise AnimationInputError(
+                f"incomplete state frame at t={t}: got {len(frame)} rows, expected {n}"
+            )
+        for i in range(n):
+            if i not in frame:
+                raise AnimationInputError(f"incomplete state frame at t={t}: missing i={i}")
+            v[frame_index, i], w[frame_index, i] = frame[i]
+
+    return States(t=np.array(times, dtype=float), v=v, w=w)
+
+
 def _optional_float(value: str | None) -> float | None:
     if value is None or value == "":
         return None
@@ -103,6 +142,20 @@ def _read_float(row: dict[str, str], name: str, path: Path, row_number: int) -> 
         )
     try:
         return float(value)
+    except ValueError as exc:
+        raise AnimationInputError(
+            f"{path.name} contains invalid value at row {row_number}, column {name}: {value!r}"
+        ) from exc
+
+
+def _read_int(row: dict[str, str], name: str, path: Path, row_number: int) -> int:
+    value = row[name]
+    if value is None or value == "":
+        raise AnimationInputError(
+            f"{path.name} contains invalid value at row {row_number}, column {name}: missing value"
+        )
+    try:
+        return int(value)
     except ValueError as exc:
         raise AnimationInputError(
             f"{path.name} contains invalid value at row {row_number}, column {name}: {value!r}"

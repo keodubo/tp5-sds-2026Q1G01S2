@@ -2,7 +2,7 @@ from pathlib import Path
 
 import pytest
 
-from scripts.animation.io import read_metadata, read_observables
+from scripts.animation.io import read_metadata, read_observables, read_states
 from scripts.animation.model import AnimationInputError, Metadata
 
 
@@ -202,3 +202,79 @@ def test_read_observables_rejects_long_row(tmp_path):
 
     with pytest.raises(AnimationInputError, match="observables.csv contains invalid row"):
         read_observables(run_dir)
+
+
+def test_read_states_orders_times_and_indices(tmp_path):
+    run_dir = tmp_path / "run"
+    run_dir.mkdir()
+    (run_dir / "states.csv").write_text(
+        "t,i,v,w\n"
+        "0.1,1,0.4,0.5\n"
+        "0.0,1,0.2,0.3\n"
+        "0.1,0,0.3,0.4\n"
+        "0.0,0,0.1,0.2\n",
+        encoding="utf-8",
+    )
+
+    states = read_states(run_dir, n=2)
+
+    assert states.t.tolist() == [0.0, 0.1]
+    assert states.v.tolist() == [[0.1, 0.2], [0.3, 0.4]]
+    assert states.w.tolist() == [[0.2, 0.3], [0.4, 0.5]]
+
+
+def test_read_states_rejects_incomplete_time(tmp_path):
+    run_dir = tmp_path / "run"
+    run_dir.mkdir()
+    (run_dir / "states.csv").write_text(
+        "t,i,v,w\n"
+        "0.0,0,0.1,0.2\n"
+        "0.0,1,0.2,0.3\n"
+        "0.1,0,0.3,0.4\n",
+        encoding="utf-8",
+    )
+
+    with pytest.raises(AnimationInputError, match="incomplete state frame"):
+        read_states(run_dir, n=2)
+
+
+def test_read_states_rejects_short_row(tmp_path):
+    run_dir = tmp_path / "run"
+    run_dir.mkdir()
+    (run_dir / "states.csv").write_text(
+        "t,i,v,w\n"
+        "0.0,0,0.1\n",
+        encoding="utf-8",
+    )
+
+    with pytest.raises(AnimationInputError, match="states.csv contains invalid value"):
+        read_states(run_dir, n=1)
+
+
+def test_read_states_rejects_duplicate_time_and_index(tmp_path):
+    run_dir = tmp_path / "run"
+    run_dir.mkdir()
+    (run_dir / "states.csv").write_text(
+        "t,i,v,w\n"
+        "0.0,0,0.1,0.2\n"
+        "0.0,0,0.3,0.4\n"
+        "0.1,0,0.5,0.6\n",
+        encoding="utf-8",
+    )
+
+    with pytest.raises(AnimationInputError, match="duplicate state row"):
+        read_states(run_dir, n=1)
+
+
+def test_read_states_requires_at_least_two_times(tmp_path):
+    run_dir = tmp_path / "run"
+    run_dir.mkdir()
+    (run_dir / "states.csv").write_text(
+        "t,i,v,w\n"
+        "0.0,0,0.1,0.2\n"
+        "0.0,1,0.2,0.3\n",
+        encoding="utf-8",
+    )
+
+    with pytest.raises(AnimationInputError, match="at least two state frames"):
+        read_states(run_dir, n=2)
