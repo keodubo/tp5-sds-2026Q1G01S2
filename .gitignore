@@ -1,1 +1,11 @@
 .DS_Store
+target/
+outputs/
+tmp/
+runs/
+*.mp4
+*.avi
+*.gif
+*.mov
+*.log
+*.class
