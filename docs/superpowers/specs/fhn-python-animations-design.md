@@ -215,9 +215,9 @@ Flags:
 --representative-time FLOAT opcional; si no se pasa, usar T/2
 --directed-edges            default: false
 --layout circular|spring    default: circular
---edge-alpha FLOAT          default: 0.08 para redes densas, 0.20 para redes no densas
---edge-width FLOAT          default: 0.25
---node-size FLOAT           default: 18
+--edge-alpha FLOAT          default: 0.06 para redes densas, 0.65 para redes no densas
+--edge-width FLOAT          default: 0.8
+--node-size FLOAT           default: 8
 --colormap NAME             default: coolwarm
 --overwrite                 default: false
 ```

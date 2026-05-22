@@ -129,23 +129,12 @@ def render_network(run: RunData, options: RenderOptions, paths: PlannedOutputPat
 
     edge_alpha = options.edge_alpha
     if edge_alpha is None:
-        edge_alpha = 0.08 if edge_count > 20000 else 0.20
+        edge_alpha = 0.06 if edge_count > 20000 else 0.65
 
     fig, axis = plt.subplots(figsize=(8, 8), constrained_layout=True)
     axis.set_axis_off()
     axis.set_title(_title(run, "Network"))
 
-    edge_draw_options = {"arrowsize": 4} if options.directed_edges else {}
-    nx.draw_networkx_edges(
-        graph,
-        positions,
-        ax=axis,
-        arrows=options.directed_edges,
-        alpha=edge_alpha,
-        width=options.edge_width,
-        edge_color="#555555",
-        **edge_draw_options,
-    )
     nodes = nx.draw_networkx_nodes(
         graph,
         positions,
@@ -157,6 +146,22 @@ def render_network(run: RunData, options: RenderOptions, paths: PlannedOutputPat
         node_size=options.node_size,
         linewidths=0.0,
     )
+    edge_draw_options = {"arrowsize": 4} if options.directed_edges else {}
+    edges = nx.draw_networkx_edges(
+        graph,
+        positions,
+        ax=axis,
+        arrows=options.directed_edges,
+        alpha=edge_alpha,
+        width=options.edge_width,
+        edge_color="#333333",
+        **edge_draw_options,
+    )
+    if hasattr(edges, "set_zorder"):
+        edges.set_zorder(3)
+    elif isinstance(edges, list):
+        for edge in edges:
+            edge.set_zorder(3)
     colorbar = fig.colorbar(nodes, ax=axis, shrink=0.75)
     colorbar.set_label("v_i(t)")
     time_text = axis.text(0.02, 0.98, "", transform=axis.transAxes, va="top")
