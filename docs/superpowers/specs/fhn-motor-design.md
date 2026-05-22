@@ -13,6 +13,16 @@ Fuentes de referencia:
 - Indicacion del profesor: usar Runge-Kutta 4
 - Decisiones tomadas con el usuario durante el armado del spec
 
+## Clarifications
+
+### Session 2026-05-22
+
+- Q: ¿Permitimos que `Topology` mantenga la matriz `Aij` como fuente de verdad, pero ademas construya una estructura derivada de vecinos activos para calcular mas rapido el acoplamiento? -> A: Si. Matriz `Aij` como fuente de verdad y vecinos activos derivados para performance.
+- Q: ¿Que `N` default usamos para produccion? -> A: `N = 501`, porque cumple `N > 500` y reduce costo computacional frente a `N = 600`.
+- Q: ¿`activeNeighbors(i)` debe devolver copia defensiva o arreglo interno? -> A: Devuelve el arreglo interno; contrato: no mutarlo.
+- Q: ¿Como manejar `T` no divisible por `dt`? -> A: Permitirlo y hacer un ultimo paso mas corto para terminar exactamente en `T`.
+- Q: ¿Como manejar `saveInterval` no divisible por `dt`? -> A: Guardar en el primer tiempo simulado que cruza cada intervalo y guardar siempre `T` exacto.
+
 ## Objetivos
 
 - Implementar un motor reproducible para FitzHugh-Nagumo en Java.
@@ -101,12 +111,14 @@ dt = 0.01
 T = 100
 ```
 
+Para los defaults de produccion, `T / dt` es entero. Si una corrida manual usa un `T` que no es multiplo exacto de `dt`, el motor debe avanzar con pasos `dt` y hacer solo el ultimo paso mas corto para terminar exactamente en `T`. Ese ultimo paso parcial debe registrarse en metadata como comportamiento de integracion.
+
 No hay un `T` fijo impuesto por el enunciado. El objetivo es que, al analizar las curvas, se note si el sistema llega a estacionario. Si no se observa estacionario con `T = 100`, se repetiran casos con mayor `T`. Si el paso resulta demasiado grande, se contrastara contra corridas con menor `dt`.
 
 ## Parametros Default de Produccion
 
 ```text
-N = 600
+N = 501
 realizations = 15
 baseSeed = 12345
 saveInterval = 0.1
@@ -144,7 +156,11 @@ total:    3630
 
 La adyacencia se representara internamente como matriz `Aij`, para mantenerse lo mas cerca posible de la formulacion del enunciado.
 
-La matriz puede implementarse como `boolean[][]` o una estructura equivalente compacta, pero la abstraccion publica del motor debe ser matriz de adyacencia.
+La matriz `Aij` es la fuente de verdad del modelo. Para acelerar el calculo del acoplamiento, `Topology` puede construir una estructura derivada de vecinos activos a partir de esa matriz. Esa estructura no cambia la semantica: debe corresponder exactamente a los indices `j` para los cuales `Aij = 1`.
+
+La matriz puede implementarse como `boolean[][]` o una estructura equivalente compacta, pero la abstraccion publica del motor debe exponer la matriz de adyacencia y permitir auditar los vecinos activos derivados.
+
+Para evitar asignaciones masivas durante RK4, el acceso a vecinos activos puede devolver el arreglo interno. Ese arreglo es de solo lectura por contrato: el motor y los tests no deben mutarlo.
 
 ### Red Completa
 
@@ -205,6 +221,7 @@ Cada corrida debe registrar en metadata:
 - `p` o `k`, si aplica
 - indice de realizacion
 - intervalo de guardado
+- si se uso ultimo paso parcial
 - flags de outputs opcionales
 
 ## CLI
@@ -238,19 +255,19 @@ mvn exec:java -Dexec.args="smoke"
 Corrida single completa:
 
 ```bash
-mvn exec:java -Dexec.args="single --topology complete --K 0.5 --N 600 --dt 0.01 --T 100"
+mvn exec:java -Dexec.args="single --topology complete --K 0.5 --N 501 --dt 0.01 --T 100"
 ```
 
 Corrida single aleatoria:
 
 ```bash
-mvn exec:java -Dexec.args="single --topology random --K 0.5 --p 0.3 --N 600 --dt 0.01 --T 100"
+mvn exec:java -Dexec.args="single --topology random --K 0.5 --p 0.3 --N 501 --dt 0.01 --T 100"
 ```
 
 Corrida single anillo:
 
 ```bash
-mvn exec:java -Dexec.args="single --topology ring --K 0.5 --k 5 --N 600 --dt 0.01 --T 100"
+mvn exec:java -Dexec.args="single --topology ring --K 0.5 --k 5 --N 501 --dt 0.01 --T 100"
 ```
 
 Guardar estados completos para animacion o inspeccion:
@@ -330,6 +347,8 @@ saveInterval = 0.1
 
 Con `dt = 0.01` y `T = 100`, esto produce aproximadamente 1001 filas de observables por corrida.
 
+Para los defaults de produccion, `saveInterval / dt` es entero y los tiempos guardados son exactos. Si una corrida manual usa un `saveInterval` que no es multiplo de `dt`, el motor debe guardar en el primer tiempo simulado `t >= n * saveInterval` para cada muestra esperada, y siempre debe guardar `t = 0` y `t = T` exacto.
+
 No se guardan estados completos por default para mantener el barrido completo dentro de un tamano razonable. El objetivo aproximado es que la simulacion completa no supere 10 GB, y el esquema default deberia quedar muy por debajo de ese limite.
 
 ### `observables.csv`
@@ -358,7 +377,7 @@ t,i,v,w
 
 Solo si se pide `--save-adjacency`.
 
-Formato recomendado:
+Formato obligatorio:
 
 ```csv
 i,j,Aij
@@ -366,15 +385,7 @@ i,j,Aij
 0,2,0
 ```
 
-Si el archivo completo resulta demasiado grande para casos densos, se puede guardar solo las aristas activas:
-
-```csv
-i,j
-0,1
-0,2
-```
-
-La decision exacta se puede ajustar durante implementacion, siempre que quede documentada y sea facil de leer desde scripts posteriores.
+El archivo debe incluir todos los pares `(i, j)` de la matriz, incluyendo ceros y diagonal, para que una corrida representativa pueda auditar la matriz completa. Este output sigue siendo opcional y no se usa por default en barridos completos.
 
 ## Estructura de Directorios de Output
 
@@ -410,6 +421,8 @@ Por default, `sweep` saltea una corrida si ya existen:
 
 - `metadata.properties`
 - `observables.csv`
+
+Una corrida se considera completa solo si `metadata.properties` existe y `observables.csv` existe, tiene header `t,mean_v,sigma_v,mean_w`, tiene al menos una fila de datos, y su ultima fila corresponde a `t = T` dentro de tolerancia numerica.
 
 Para regenerar:
 
@@ -454,7 +467,7 @@ Responsabilidades:
 
 - `Main`: parseo CLI, seleccion de modo, ejecucion.
 - `Config`: parametros, defaults y validacion.
-- `Topology`: construccion de matriz `Aij`.
+- `Topology`: construccion de matriz `Aij` y vecinos activos derivados.
 - `FhnSimulation`: estado, RK4, calculo de derivadas y observables.
 - `OutputWriter`: metadata, observables, estados opcionales, resumen/log.
 
@@ -523,6 +536,7 @@ Antes de entregar:
 
 - `dt = 0.01` y `T = 100` son defaults iniciales. Se deben contrastar con datos simulados para confirmar que se observa estacionario y que el paso es adecuado.
 - El acoplamiento literal puede producir dinamicas muy fuertes en redes densas. Esto es intencional para seguir el enunciado, pero puede exigir menor `dt`.
+- Aunque `N = 501` reduce costo frente a valores mayores, red completa y aleatoria densa siguen siendo caras. Por eso se permite usar vecinos activos derivados de `Aij` para calcular el acoplamiento sin cambiar el modelo.
 - La red aleatoria se implementa dirigida porque el enunciado define `Aij` independiente y el usuario pidio no imponer simetria.
 - `adjacency.csv` queda opcional para no aumentar el peso de outputs.
 

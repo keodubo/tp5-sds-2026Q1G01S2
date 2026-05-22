@@ -4,7 +4,7 @@
 
 **Goal:** Build the Java/Maven simulation motor for TP5 Sistema 2, FitzHugh-Nagumo, following `docs/superpowers/specs/fhn-motor-design.md`.
 
-**Architecture:** A compact Java 21 CLI motor with five focused production classes: `Main`, `Config`, `Topology`, `FhnSimulation`, and `OutputWriter`. The motor uses fixed-step RK4, an internal adjacency matrix `Aij`, reproducible seeds, resumable output directories, and lightweight CSV/properties outputs.
+**Architecture:** A compact Java 21 CLI motor with five focused production classes: `Main`, `Config`, `Topology`, `FhnSimulation`, and `OutputWriter`. The motor uses fixed-step RK4, an internal adjacency matrix `Aij` as the source of truth, active-neighbor views derived from that matrix for coupling performance, reproducible seeds, resumable output directories, and lightweight CSV/properties outputs.
 
 **Tech Stack:** Java 21, Maven 3, JUnit Jupiter for tests only, Java standard library for production code.
 
@@ -24,7 +24,7 @@ Create:
 - `pom.xml`: Java 21 Maven config, JUnit tests, exec plugin entrypoint.
 - `src/main/java/ar/edu/itba/sds/tp5/Main.java`: CLI entrypoint and mode dispatch.
 - `src/main/java/ar/edu/itba/sds/tp5/Config.java`: defaults, parsing, validation, seed derivation, run path naming.
-- `src/main/java/ar/edu/itba/sds/tp5/Topology.java`: adjacency matrix constructors and public edge contract.
+- `src/main/java/ar/edu/itba/sds/tp5/Topology.java`: adjacency matrix constructors, active-neighbor derivation, and public edge contract.
 - `src/main/java/ar/edu/itba/sds/tp5/FhnSimulation.java`: RK4, state initialization, observables, optional state snapshots.
 - `src/main/java/ar/edu/itba/sds/tp5/OutputWriter.java`: metadata, observables, states, adjacency, sweep log, summary.
 - `src/test/java/ar/edu/itba/sds/tp5/TopologyTest.java`: topology contracts.
@@ -68,6 +68,7 @@ public record Config(
     public static Config parse(String[] args);
     public long runSeed();
     public java.nio.file.Path runDirectory();
+    public Config withSweepValues(String newTopology, double newK, double newP, int newRingK, int newRealization);
 }
 
 public final class Topology {
@@ -77,18 +78,23 @@ public final class Topology {
     public static Topology ring(int n, int k);
     public int size();
     public boolean edge(int i, int j);
+    /** Returns the internal read-only-by-contract neighbor array. Do not mutate it. */
+    public int[] activeNeighbors(int i);
     public boolean[][] adjacency();
 }
 
 public final class FhnSimulation {
     public record Observable(double t, double meanV, double sigmaV, double meanW) {}
     public record StateRow(double t, int i, double v, double w) {}
-    public record Result(java.util.List<Observable> observables, java.util.List<StateRow> states) {}
+    public record Result(java.util.List<Observable> observables, java.util.List<StateRow> states, boolean usedPartialFinalStep) {}
     public static Result run(Config config, Topology topology);
 }
 
 public final class OutputWriter {
     public static void writeRun(Config config, Topology topology, FhnSimulation.Result result) throws java.io.IOException;
+    public static boolean completed(Config config);
+    public static void appendLog(java.nio.file.Path outputDir, String line) throws java.io.IOException;
+    public static void appendSummary(java.nio.file.Path outputDir, Config config, String status) throws java.io.IOException;
 }
 ```
 
@@ -320,7 +326,7 @@ public record Config(
         }
 
         String topology = values.get("topology");
-        int n = intValue(values, "N", "smoke".equals(mode) ? 12 : 600);
+        int n = intValue(values, "N", "smoke".equals(mode) ? 12 : 501);
         double kValue = doubleValue(values, "K", Double.NaN);
         double pValue = doubleValue(values, "p", Double.NaN);
         int ringK = intValue(values, "k", -1);
@@ -493,9 +499,11 @@ package ar.edu.itba.sds.tp5;
 
 import org.junit.jupiter.api.Test;
 
-import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import java.util.Arrays;
+
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 
 final class TopologyTest {
     @Test
@@ -522,11 +530,18 @@ final class TopologyTest {
     }
 
     @Test
+    void activeNeighborsMatchAdjacencyRows() {
+        Topology topology = Topology.ring(6, 2);
+
+        assertArrayEquals(new int[] {1, 2, 4, 5}, topology.activeNeighbors(0));
+    }
+
+    @Test
     void randomIsReproducibleWithSeed() {
         boolean[][] first = Topology.random(8, 0.35, 99L).adjacency();
         boolean[][] second = Topology.random(8, 0.35, 99L).adjacency();
 
-        assertArrayEquals(first, second);
+        assertTrue(Arrays.deepEquals(first, second));
     }
 
     @Test
@@ -569,10 +584,12 @@ public final class Topology {
 
     private final Type type;
     private final boolean[][] adjacency;
+    private final int[][] activeNeighbors;
 
     private Topology(Type type, boolean[][] adjacency) {
         this.type = type;
         this.adjacency = adjacency;
+        this.activeNeighbors = activeNeighbors(adjacency);
     }
 
     public static Topology complete(int n) {
@@ -620,12 +637,37 @@ public final class Topology {
         return adjacency[i][j];
     }
 
+    /** Returns the internal read-only-by-contract neighbor array. Do not mutate it. */
+    public int[] activeNeighbors(int i) {
+        return activeNeighbors[i];
+    }
+
     public boolean[][] adjacency() {
         boolean[][] copy = new boolean[adjacency.length][adjacency.length];
         for (int i = 0; i < adjacency.length; i++) {
             System.arraycopy(adjacency[i], 0, copy[i], 0, adjacency.length);
         }
         return copy;
+    }
+
+    private static int[][] activeNeighbors(boolean[][] adjacency) {
+        int[][] neighbors = new int[adjacency.length][];
+        for (int i = 0; i < adjacency.length; i++) {
+            int count = 0;
+            for (int j = 0; j < adjacency.length; j++) {
+                if (adjacency[i][j]) {
+                    count++;
+                }
+            }
+            neighbors[i] = new int[count];
+            int index = 0;
+            for (int j = 0; j < adjacency.length; j++) {
+                if (adjacency[i][j]) {
+                    neighbors[i][index++] = j;
+                }
+            }
+        }
+        return neighbors;
     }
 }
 ```
@@ -671,6 +713,7 @@ import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 final class FhnSimulationTest {
     @TempDir
@@ -711,6 +754,39 @@ final class FhnSimulationTest {
     }
 
     @Test
+    void nonMultipleTotalTimeUsesPartialFinalStep() {
+        Config config = Config.parse(new String[] {
+            "smoke", "--topology", "complete", "--K", "0.2",
+            "--dt", "0.1", "--T", "0.25", "--save-interval", "0.1",
+            "--output-dir", tempDir.toString()
+        });
+
+        FhnSimulation.Result result = FhnSimulation.run(config, Topology.complete(config.n()));
+        List<FhnSimulation.Observable> observables = result.observables();
+
+        assertEquals(4, observables.size());
+        assertEquals(0.25, observables.get(3).t(), 1e-12);
+        assertTrue(result.usedPartialFinalStep());
+    }
+
+    @Test
+    void nonMultipleSaveIntervalUsesFirstSimulatedTimeAfterInterval() {
+        Config config = Config.parse(new String[] {
+            "smoke", "--topology", "complete", "--K", "0.2",
+            "--dt", "0.03", "--T", "0.12", "--save-interval", "0.05",
+            "--output-dir", tempDir.toString()
+        });
+
+        FhnSimulation.Result result = FhnSimulation.run(config, Topology.complete(config.n()));
+        List<FhnSimulation.Observable> observables = result.observables();
+
+        assertEquals(3, observables.size());
+        assertEquals(0.0, observables.get(0).t(), 1e-12);
+        assertEquals(0.06, observables.get(1).t(), 1e-12);
+        assertEquals(0.12, observables.get(2).t(), 1e-12);
+    }
+
+    @Test
     void saveStatesCapturesAllNeuronsAtSavedTimes() {
         Config config = Config.parse(new String[] {
             "smoke", "--topology", "ring", "--K", "0.2", "--k", "2",
@@ -747,6 +823,7 @@ import java.util.List;
 import java.util.Random;
 
 public final class FhnSimulation {
+    private static final double EPS = 1e-12;
     private static final double I_EXT = 0.5;
     private static final double EPSILON = 0.08;
     private static final double A = 0.7;
@@ -761,7 +838,33 @@ public final class FhnSimulation {
     public record StateRow(double t, int i, double v, double w) {
     }
 
-    public record Result(List<Observable> observables, List<StateRow> states) {
+    public record Result(List<Observable> observables, List<StateRow> states, boolean usedPartialFinalStep) {
+    }
+
+    private static final class Workspace {
+        final double[] k1v;
+        final double[] k1w;
+        final double[] k2v;
+        final double[] k2w;
+        final double[] k3v;
+        final double[] k3w;
+        final double[] k4v;
+        final double[] k4w;
+        final double[] tmpV;
+        final double[] tmpW;
+
+        Workspace(int n) {
+            this.k1v = new double[n];
+            this.k1w = new double[n];
+            this.k2v = new double[n];
+            this.k2w = new double[n];
+            this.k3v = new double[n];
+            this.k3w = new double[n];
+            this.k4v = new double[n];
+            this.k4w = new double[n];
+            this.tmpV = new double[n];
+            this.tmpW = new double[n];
+        }
     }
 
     public static Result run(Config config, Topology topology) {
@@ -772,21 +875,33 @@ public final class FhnSimulation {
 
         List<Observable> observables = new ArrayList<>();
         List<StateRow> states = config.saveStates() ? new ArrayList<>() : List.of();
+        Workspace workspace = new Workspace(n);
 
         double t = 0.0;
-        int steps = (int) Math.round(config.totalTime() / config.dt());
-        int saveEvery = Math.max(1, (int) Math.round(config.saveInterval() / config.dt()));
+        double nextSaveTime = config.saveInterval();
+        boolean usedPartialFinalStep = false;
 
         save(t, v, w, observables, states, config.saveStates());
-        for (int step = 1; step <= steps; step++) {
-            rk4Step(v, w, topology, config.kValue(), config.dt());
-            t = step * config.dt();
-            if (step % saveEvery == 0 || step == steps) {
+        while (t < config.totalTime() - EPS) {
+            double stepDt = Math.min(config.dt(), config.totalTime() - t);
+            if (stepDt < config.dt() - EPS) {
+                usedPartialFinalStep = true;
+            }
+            rk4Step(v, w, topology, config.kValue(), stepDt, workspace);
+            t = roundTime(t + stepDt);
+            if (t + EPS >= nextSaveTime || t >= config.totalTime() - EPS) {
                 save(roundTime(t), v, w, observables, states, config.saveStates());
+                while (nextSaveTime <= t + EPS) {
+                    nextSaveTime += config.saveInterval();
+                }
             }
         }
 
-        return new Result(List.copyOf(observables), config.saveStates() ? List.copyOf(states) : List.of());
+        return new Result(
+            List.copyOf(observables),
+            config.saveStates() ? List.copyOf(states) : List.of(),
+            usedPartialFinalStep
+        );
     }
 
     private static void initialize(double[] v, double[] w, long seed) {
@@ -797,30 +912,19 @@ public final class FhnSimulation {
         }
     }
 
-    private static void rk4Step(double[] v, double[] w, Topology topology, double k, double dt) {
+    private static void rk4Step(double[] v, double[] w, Topology topology, double k, double dt, Workspace ws) {
         int n = v.length;
-        double[] k1v = new double[n];
-        double[] k1w = new double[n];
-        double[] k2v = new double[n];
-        double[] k2w = new double[n];
-        double[] k3v = new double[n];
-        double[] k3w = new double[n];
-        double[] k4v = new double[n];
-        double[] k4w = new double[n];
-        double[] tmpV = new double[n];
-        double[] tmpW = new double[n];
-
-        derivatives(v, w, topology, k, k1v, k1w);
-        combine(v, w, k1v, k1w, tmpV, tmpW, 0.5 * dt);
-        derivatives(tmpV, tmpW, topology, k, k2v, k2w);
-        combine(v, w, k2v, k2w, tmpV, tmpW, 0.5 * dt);
-        derivatives(tmpV, tmpW, topology, k, k3v, k3w);
-        combine(v, w, k3v, k3w, tmpV, tmpW, dt);
-        derivatives(tmpV, tmpW, topology, k, k4v, k4w);
+        derivatives(v, w, topology, k, ws.k1v, ws.k1w);
+        combine(v, w, ws.k1v, ws.k1w, ws.tmpV, ws.tmpW, 0.5 * dt);
+        derivatives(ws.tmpV, ws.tmpW, topology, k, ws.k2v, ws.k2w);
+        combine(v, w, ws.k2v, ws.k2w, ws.tmpV, ws.tmpW, 0.5 * dt);
+        derivatives(ws.tmpV, ws.tmpW, topology, k, ws.k3v, ws.k3w);
+        combine(v, w, ws.k3v, ws.k3w, ws.tmpV, ws.tmpW, dt);
+        derivatives(ws.tmpV, ws.tmpW, topology, k, ws.k4v, ws.k4w);
 
         for (int i = 0; i < n; i++) {
-            v[i] += dt * (k1v[i] + 2.0 * k2v[i] + 2.0 * k3v[i] + k4v[i]) / 6.0;
-            w[i] += dt * (k1w[i] + 2.0 * k2w[i] + 2.0 * k3w[i] + k4w[i]) / 6.0;
+            v[i] += dt * (ws.k1v[i] + 2.0 * ws.k2v[i] + 2.0 * ws.k3v[i] + ws.k4v[i]) / 6.0;
+            w[i] += dt * (ws.k1w[i] + 2.0 * ws.k2w[i] + 2.0 * ws.k3w[i] + ws.k4w[i]) / 6.0;
         }
     }
 
@@ -828,10 +932,8 @@ public final class FhnSimulation {
         int n = v.length;
         for (int i = 0; i < n; i++) {
             double coupling = 0.0;
-            for (int j = 0; j < n; j++) {
-                if (topology.edge(i, j)) {
-                    coupling += v[j] - v[i];
-                }
+            for (int j : topology.activeNeighbors(i)) {
+                coupling += v[j] - v[i];
             }
             dv[i] = v[i] - (v[i] * v[i] * v[i]) / 3.0 - w[i] + I_EXT + k * coupling;
             dw[i] = EPSILON * (v[i] + A - B * w[i]);
@@ -947,6 +1049,7 @@ Create `src/main/java/ar/edu/itba/sds/tp5/OutputWriter.java`:
 package ar.edu.itba.sds.tp5;
 
 import java.io.BufferedWriter;
+import java.io.BufferedReader;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -961,7 +1064,7 @@ public final class OutputWriter {
     public static void writeRun(Config config, Topology topology, FhnSimulation.Result result) throws IOException {
         Path runDir = config.runDirectory();
         Files.createDirectories(runDir);
-        writeMetadata(runDir.resolve("metadata.properties"), config, topology);
+        writeMetadata(runDir.resolve("metadata.properties"), config, topology, result);
         writeObservables(runDir.resolve("observables.csv"), result);
         if (config.saveStates()) {
             writeStates(runDir.resolve("states.csv"), result);
@@ -973,7 +1076,31 @@ public final class OutputWriter {
 
     public static boolean completed(Config config) {
         Path runDir = config.runDirectory();
-        return Files.exists(runDir.resolve("metadata.properties")) && Files.exists(runDir.resolve("observables.csv"));
+        Path metadata = runDir.resolve("metadata.properties");
+        Path observables = runDir.resolve("observables.csv");
+        if (!Files.exists(metadata) || !Files.exists(observables)) {
+            return false;
+        }
+        try (BufferedReader reader = Files.newBufferedReader(observables)) {
+            String header = reader.readLine();
+            if (!"t,mean_v,sigma_v,mean_w".equals(header)) {
+                return false;
+            }
+            String last = null;
+            String line;
+            while ((line = reader.readLine()) != null) {
+                if (!line.isBlank()) {
+                    last = line;
+                }
+            }
+            if (last == null) {
+                return false;
+            }
+            String[] columns = last.split(",", -1);
+            return columns.length >= 4 && Math.abs(Double.parseDouble(columns[0]) - config.totalTime()) < 1e-9;
+        } catch (IOException | NumberFormatException e) {
+            return false;
+        }
     }
 
     public static void appendLog(Path outputDir, String line) throws IOException {
@@ -1017,7 +1144,7 @@ public final class OutputWriter {
         }
     }
 
-    private static void writeMetadata(Path path, Config config, Topology topology) throws IOException {
+    private static void writeMetadata(Path path, Config config, Topology topology, FhnSimulation.Result result) throws IOException {
         Properties properties = new Properties();
         properties.setProperty("mode", config.mode());
         properties.setProperty("topology", config.topology());
@@ -1033,6 +1160,7 @@ public final class OutputWriter {
         properties.setProperty("runSeed", Long.toString(config.runSeed()));
         properties.setProperty("saveStates", Boolean.toString(config.saveStates()));
         properties.setProperty("saveAdjacency", Boolean.toString(config.saveAdjacency()));
+        properties.setProperty("usedPartialFinalStep", Boolean.toString(result.usedPartialFinalStep()));
         properties.setProperty("topologyType", topology.type().name());
         try (BufferedWriter writer = Files.newBufferedWriter(path)) {
             properties.store(writer, "TP5 Sistema 2 FitzHugh-Nagumo run metadata");
@@ -1548,9 +1676,9 @@ tmp/smoke/runs/complete/K_0.20/seed_0001/observables.csv
 Run:
 
 ```bash
-mvn exec:java -Dexec.args="single --topology complete --K 0.5 --N 600 --dt 0.01 --T 1 --output-dir tmp/manual"
-mvn exec:java -Dexec.args="single --topology random --K 0.5 --p 0.3 --N 600 --dt 0.01 --T 1 --output-dir tmp/manual"
-mvn exec:java -Dexec.args="single --topology ring --K 0.5 --k 5 --N 600 --dt 0.01 --T 1 --output-dir tmp/manual"
+mvn exec:java -Dexec.args="single --topology complete --K 0.5 --N 501 --dt 0.01 --T 1 --output-dir tmp/manual"
+mvn exec:java -Dexec.args="single --topology random --K 0.5 --p 0.3 --N 501 --dt 0.01 --T 1 --output-dir tmp/manual"
+mvn exec:java -Dexec.args="single --topology ring --K 0.5 --k 5 --N 501 --dt 0.01 --T 1 --output-dir tmp/manual"
 ```
 
 Expected: three `OK` lines and one run directory for each topology under `tmp/manual/runs/`.
@@ -1574,7 +1702,7 @@ t,mean_v,sigma_v,mean_w
 Run:
 
 ```bash
-mvn exec:java -Dexec.args="single --topology ring --K 0.5 --k 5 --N 600 --dt 0.01 --T 0.2 --save-states --output-dir tmp/states"
+mvn exec:java -Dexec.args="single --topology ring --K 0.5 --k 5 --N 501 --dt 0.01 --T 0.2 --save-states --output-dir tmp/states"
 head -1 tmp/states/runs/ring/k_05/K_0.50/seed_0001/states.csv
 ```
 
@@ -1632,6 +1760,8 @@ git commit -m "docs: align FHN motor implementation plan"
 - Do not implement analysis, animation, presentation, Sistema 1, or Sistema 3 in this plan.
 - Do not generate production-scale sweeps until smoke, single, and tiny sweep checks pass.
 - Do not commit `outputs/`, `tmp/`, `target/`, videos, or generated caches.
+- Keep `Aij` as the source of truth, but calculate coupling through active neighbors derived from `Aij` to avoid scanning avoidable zero entries.
+- Reuse RK4 workspace arrays across steps. Do not allocate derivative buffers inside the step loop.
 - Preserve the literal coupling from the enunciado:
 
 ```text
@@ -1655,4 +1785,6 @@ Known implementation tradeoffs:
 
 - `--output-dir` is added as a practical CLI flag for tests and local runs. Default remains `outputs`.
 - `adjacency.csv` is written as full `i,j,Aij` when requested. This matches the spec recommendation and keeps the optional output explicit.
+- `Topology.activeNeighbors(i)` is derived from the matrix and exists only to make coupling evaluation tractable. It returns the internal array by contract to avoid per-derivative allocations; callers must not mutate it. Tests must verify it matches the matrix row.
+- `FhnSimulation.Workspace` keeps RK4 temporary arrays reusable per run to avoid avoidable garbage collection during long sweeps.
 - `Config.withSweepValues` reuses the base config to derive sweep runs. Validation remains centralized in `Config.parse`; generated sweep configs are built from already validated values.
