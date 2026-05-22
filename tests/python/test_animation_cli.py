@@ -64,6 +64,19 @@ def write_tiny_run(run_dir: Path, include_adjacency: bool = True) -> None:
         )
 
 
+def write_planned_outputs(output_dir: Path, size: int = 1) -> None:
+    run_output = output_dir / "ring_k_01_K_0.20_seed_0001"
+    run_output.mkdir(parents=True)
+    data = b"x" * size
+    for name in [
+        "network.mp4",
+        "network_frame.png",
+        "dashboard.mp4",
+        "dashboard_frame.png",
+    ]:
+        (run_output / name).write_bytes(data)
+
+
 def test_cli_requires_run_dir():
     result = subprocess.run(
         [sys.executable, "scripts/animate_fhn.py"],
@@ -204,3 +217,223 @@ def test_render_network_outputs_mp4_and_png(tmp_path):
     assert paths.network_mp4.stat().st_size > 0
     assert paths.network_png.exists()
     assert paths.network_png.stat().st_size > 0
+
+
+def test_cli_generates_all_outputs(tmp_path):
+    run_dir = tmp_path / "run"
+    output_dir = tmp_path / "renders"
+    write_tiny_run(run_dir)
+
+    result = subprocess.run(
+        [
+            sys.executable,
+            "scripts/animate_fhn.py",
+            "--run-dir",
+            str(run_dir),
+            "--output-dir",
+            str(output_dir),
+            "--fps",
+            "2",
+            "--dpi",
+            "80",
+            "--overwrite",
+        ],
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+
+    assert result.returncode == 0, result.stderr
+    run_output = output_dir / "ring_k_01_K_0.20_seed_0001"
+    assert (run_output / "network.mp4").exists()
+    assert (run_output / "network_frame.png").exists()
+    assert (run_output / "dashboard.mp4").exists()
+    assert (run_output / "dashboard_frame.png").exists()
+
+
+def test_cli_dashboard_only_works_without_adjacency(tmp_path):
+    run_dir = tmp_path / "run"
+    output_dir = tmp_path / "renders"
+    write_tiny_run(run_dir, include_adjacency=False)
+
+    result = subprocess.run(
+        [
+            sys.executable,
+            "scripts/animate_fhn.py",
+            "--run-dir",
+            str(run_dir),
+            "--output-dir",
+            str(output_dir),
+            "--only",
+            "dashboard",
+            "--fps",
+            "2",
+            "--dpi",
+            "80",
+            "--overwrite",
+        ],
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+
+    assert result.returncode == 0, result.stderr
+    run_output = output_dir / "ring_k_01_K_0.20_seed_0001"
+    assert not (run_output / "network.mp4").exists()
+    assert (run_output / "dashboard.mp4").exists()
+
+
+def test_cli_reports_missing_states(tmp_path):
+    run_dir = tmp_path / "run"
+    write_tiny_run(run_dir)
+    (run_dir / "states.csv").unlink()
+
+    result = subprocess.run(
+        [
+            sys.executable,
+            "scripts/animate_fhn.py",
+            "--run-dir",
+            str(run_dir),
+        ],
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+
+    assert result.returncode == 1
+    assert "states.csv not found" in result.stderr
+    assert "--save-states" in result.stderr
+
+
+def test_cli_skips_when_all_planned_outputs_are_non_empty(tmp_path):
+    run_dir = tmp_path / "run"
+    output_dir = tmp_path / "renders"
+    write_tiny_run(run_dir)
+    write_planned_outputs(output_dir)
+
+    result = subprocess.run(
+        [
+            sys.executable,
+            "scripts/animate_fhn.py",
+            "--run-dir",
+            str(run_dir),
+            "--output-dir",
+            str(output_dir),
+        ],
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+
+    assert result.returncode == 0, result.stderr
+    assert "SKIP existing" in result.stdout
+
+
+def test_cli_skips_existing_outputs_without_loading_states(tmp_path):
+    run_dir = tmp_path / "run"
+    output_dir = tmp_path / "renders"
+    write_tiny_run(run_dir)
+    write_planned_outputs(output_dir)
+    (run_dir / "states.csv").unlink()
+
+    result = subprocess.run(
+        [
+            sys.executable,
+            "scripts/animate_fhn.py",
+            "--run-dir",
+            str(run_dir),
+            "--output-dir",
+            str(output_dir),
+        ],
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+
+    assert result.returncode == 0, result.stderr
+    assert "SKIP existing" in result.stdout
+
+
+def test_cli_rejects_zero_byte_planned_output_as_partial(tmp_path):
+    run_dir = tmp_path / "run"
+    output_dir = tmp_path / "renders"
+    write_tiny_run(run_dir)
+    write_planned_outputs(output_dir)
+    (output_dir / "ring_k_01_K_0.20_seed_0001" / "network.mp4").write_bytes(b"")
+
+    result = subprocess.run(
+        [
+            sys.executable,
+            "scripts/animate_fhn.py",
+            "--run-dir",
+            str(run_dir),
+            "--output-dir",
+            str(output_dir),
+        ],
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+
+    assert result.returncode == 1
+    assert "partial outputs already exist without --overwrite" in result.stderr
+    assert "network.mp4" in result.stderr
+
+
+def test_cli_rejects_missing_planned_output_as_partial(tmp_path):
+    run_dir = tmp_path / "run"
+    output_dir = tmp_path / "renders"
+    write_tiny_run(run_dir)
+    write_planned_outputs(output_dir)
+    (output_dir / "ring_k_01_K_0.20_seed_0001" / "network_frame.png").unlink()
+
+    result = subprocess.run(
+        [
+            sys.executable,
+            "scripts/animate_fhn.py",
+            "--run-dir",
+            str(run_dir),
+            "--output-dir",
+            str(output_dir),
+        ],
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+
+    assert result.returncode == 1
+    assert "partial outputs already exist without --overwrite" in result.stderr
+    assert "network.mp4" in result.stderr
+
+
+def test_cli_dashboard_only_ignores_corrupt_adjacency(tmp_path):
+    run_dir = tmp_path / "run"
+    output_dir = tmp_path / "renders"
+    write_tiny_run(run_dir)
+    (run_dir / "adjacency.csv").write_text("not,the,expected,header\n", encoding="utf-8")
+
+    result = subprocess.run(
+        [
+            sys.executable,
+            "scripts/animate_fhn.py",
+            "--run-dir",
+            str(run_dir),
+            "--output-dir",
+            str(output_dir),
+            "--only",
+            "dashboard",
+            "--fps",
+            "2",
+            "--dpi",
+            "80",
+            "--overwrite",
+        ],
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+
+    assert result.returncode == 0, result.stderr
+    run_output = output_dir / "ring_k_01_K_0.20_seed_0001"
+    assert (run_output / "dashboard.mp4").exists()
+    assert not (run_output / "network.mp4").exists()

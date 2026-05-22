@@ -4,7 +4,7 @@ import argparse
 from dataclasses import dataclass
 from pathlib import Path
 
-from .model import Metadata, RenderOptions
+from .model import AnimationInputError, Metadata, RenderOptions
 
 
 @dataclass(frozen=True)
@@ -39,7 +39,60 @@ def build_parser() -> argparse.ArgumentParser:
 
 
 def parse_options(argv: list[str] | None = None) -> RenderOptions:
-    args = build_parser().parse_args(argv)
+    return _options_from_args(build_parser().parse_args(argv))
+
+
+def output_paths(metadata: Metadata, options: RenderOptions) -> PlannedOutputPaths:
+    run_output_dir = options.output_dir / metadata.run_id()
+    return PlannedOutputPaths(
+        run_dir=run_output_dir,
+        network_mp4=run_output_dir / "network.mp4",
+        network_png=run_output_dir / "network_frame.png",
+        dashboard_mp4=run_output_dir / "dashboard.mp4",
+        dashboard_png=run_output_dir / "dashboard_frame.png",
+    )
+
+
+def main(argv: list[str] | None = None) -> int:
+    parser = build_parser()
+    args = parser.parse_args(argv)
+    try:
+        options = _options_from_args(args)
+        require_graph = options.only in ("network", "all")
+        from .io import load_run, read_metadata
+        from .render import render_dashboard, render_network
+
+        metadata = read_metadata(args.run_dir)
+        paths = output_paths(metadata, options)
+        planned = _planned_files(options.only, paths)
+
+        if not options.overwrite:
+            complete = [path for path in planned if path.exists() and path.stat().st_size > 0]
+            existing = [path for path in planned if path.exists()]
+            if len(complete) == len(planned):
+                print(f"SKIP existing {paths.run_dir}")
+                return 0
+            if existing:
+                names = ", ".join(str(path) for path in existing)
+                raise AnimationInputError(f"partial outputs already exist without --overwrite: {names}")
+
+        run = load_run(args.run_dir, require_graph=require_graph)
+        if options.only in ("network", "all"):
+            render_network(run, options, paths)
+        if options.only in ("dashboard", "all"):
+            render_dashboard(run, options, paths)
+        print(f"OK {paths.run_dir}")
+        return 0
+    except AnimationInputError as exc:
+        message = str(exc)
+        if "states.csv not found" in message:
+            message += ". Regenerate the simulation with --save-states."
+        if "adjacency.csv not found" in message:
+            message += ". Regenerate the simulation with --save-adjacency or run with --only dashboard."
+        parser.exit(1, f"ERROR: {message}\n")
+
+
+def _options_from_args(args: argparse.Namespace) -> RenderOptions:
     if args.fps <= 0:
         raise SystemExit("--fps must be positive")
     if args.dpi <= 0:
@@ -63,17 +116,9 @@ def parse_options(argv: list[str] | None = None) -> RenderOptions:
     )
 
 
-def output_paths(metadata: Metadata, options: RenderOptions) -> PlannedOutputPaths:
-    run_output_dir = options.output_dir / metadata.run_id()
-    return PlannedOutputPaths(
-        run_dir=run_output_dir,
-        network_mp4=run_output_dir / "network.mp4",
-        network_png=run_output_dir / "network_frame.png",
-        dashboard_mp4=run_output_dir / "dashboard.mp4",
-        dashboard_png=run_output_dir / "dashboard_frame.png",
-    )
-
-
-def main(argv: list[str] | None = None) -> int:
-    parse_options(argv)
-    return 0
+def _planned_files(only: str, paths: PlannedOutputPaths) -> list[Path]:
+    if only == "network":
+        return [paths.network_mp4, paths.network_png]
+    if only == "dashboard":
+        return [paths.dashboard_mp4, paths.dashboard_png]
+    return [paths.network_mp4, paths.network_png, paths.dashboard_mp4, paths.dashboard_png]

@@ -194,8 +194,6 @@ def load_run(run_dir: Path, require_graph: bool) -> RunData:
     graph_data = None
     if require_graph:
         graph_data = build_graph_from_adjacency(run_dir, metadata.n)
-    elif (run_dir / "adjacency.csv").exists():
-        graph_data = build_graph_from_adjacency(run_dir, metadata.n)
     return RunData(
         metadata=metadata,
         observables=observables,
