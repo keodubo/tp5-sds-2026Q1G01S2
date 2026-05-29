@@ -42,7 +42,7 @@ final class SweepTest {
     }
 
     @Test
-    void randomSweepDoesNotRequireSpecificP() throws Exception {
+    void randomSweepUsesUpdatedLogarithmicPGrid() throws Exception {
         int exitCode = Main.run(new String[] {
             "sweep", "--topology", "random", "--N", "501",
             "--T", "0.01", "--dt", "0.01", "--save-interval", "0.01",
@@ -50,8 +50,9 @@ final class SweepTest {
         });
 
         assertEquals(0, exitCode);
-        assertTrue(Files.exists(tempDir.resolve("runs").resolve("random").resolve("p_0.00").resolve("K_0.00").resolve("seed_0001").resolve("observables.csv")));
-        assertTrue(Files.exists(tempDir.resolve("runs").resolve("random").resolve("p_1.00").resolve("K_1.00").resolve("seed_0001").resolve("observables.csv")));
+        assertTrue(Files.exists(tempDir.resolve("runs").resolve("random").resolve("p_1.0000e-4").resolve("K_0.00").resolve("seed_0001").resolve("observables.csv")));
+        assertTrue(Files.exists(tempDir.resolve("runs").resolve("random").resolve("p_0.10").resolve("K_1.00").resolve("seed_0001").resolve("observables.csv")));
+        assertTrue(Files.notExists(tempDir.resolve("runs").resolve("random").resolve("p_1.00")));
     }
 
     @Test

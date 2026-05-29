@@ -21,7 +21,7 @@ class GroupKey:
         if self.topology == "complete":
             return f"complete K={self.k_value:.2f}"
         if self.topology == "random":
-            return f"random p={self.p_value:.2f} K={self.k_value:.2f}"
+            return f"random p={format_probability(self.p_value)} K={self.k_value:.2f}"
         if self.topology == "ring":
             return f"ring k={self.ring_k:02d} K={self.k_value:.2f}"
         return f"{self.topology} K={self.k_value:.2f}"
@@ -191,7 +191,7 @@ def expected_group_keys() -> list[GroupKey]:
     keys: list[GroupKey] = []
     for k_value in grid01():
         keys.append(GroupKey("complete", k_value, None, None))
-    for p_value in grid01():
+    for p_value in p_grid():
         for k_value in grid01():
             keys.append(GroupKey("random", k_value, p_value, None))
     for ring_k in range(1, 11):
@@ -202,6 +202,19 @@ def expected_group_keys() -> list[GroupKey]:
 
 def grid01() -> list[float]:
     return [round(i / 10.0, 1) for i in range(11)]
+
+
+def p_grid() -> list[float]:
+    values = np.logspace(-4.0, -1.0, 10)
+    values[0] = 1.0e-4
+    values[-1] = 1.0e-1
+    return [float(value) for value in values]
+
+
+def format_probability(value: float | None) -> str:
+    if value is None:
+        return ""
+    return f"{value:.4g}"
 
 
 def aggregate_metrics(metrics: list[RunMetrics]) -> dict[str, float | int]:

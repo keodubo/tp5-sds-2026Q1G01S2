@@ -120,7 +120,7 @@ public final class OutputWriter {
                 "%s,%.2f,%s,%s,%d,%d,%d,%s,%s",
                 config.topology(),
                 config.kValue(),
-                Double.isNaN(config.pValue()) ? "" : String.format(Locale.ROOT, "%.2f", config.pValue()),
+                Config.formatProbability(config.pValue()),
                 config.ringK() < 0 ? "" : Integer.toString(config.ringK()),
                 config.realizationIndex(),
                 config.baseSeed(),

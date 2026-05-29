@@ -107,8 +107,8 @@ public record Config(
         if (requiresK() && (Double.isNaN(kValue) || kValue < 0.0 || kValue > 1.0)) {
             throw new IllegalArgumentException("K must be in [0, 1]");
         }
-        if (requiresTopologyParameter() && "random".equals(topology) && (Double.isNaN(pValue) || pValue < 0.0 || pValue > 1.0)) {
-            throw new IllegalArgumentException("p must be in [0, 1]");
+        if (requiresTopologyParameter() && "random".equals(topology) && (Double.isNaN(pValue) || pValue < 1.0e-4 || pValue > 1.0e-1)) {
+            throw new IllegalArgumentException("p must be in [1e-4, 1e-1]");
         }
         if (requiresTopologyParameter() && "ring".equals(topology) && (ringK < 1 || ringK > 10)) {
             throw new IllegalArgumentException("k must be in [1, 10]");
@@ -180,7 +180,7 @@ public record Config(
     }
 
     private String pDir() {
-        return String.format(Locale.ROOT, "p_%.2f", pValue);
+        return "p_" + formatProbability(pValue);
     }
 
     private String ringDir() {
@@ -197,5 +197,16 @@ public record Config(
 
     private static double doubleValue(Map<String, String> values, String key, double defaultValue) {
         return values.containsKey(key) ? Double.parseDouble(values.get(key)) : defaultValue;
+    }
+
+    static String formatProbability(double value) {
+        if (Double.isNaN(value)) {
+            return "";
+        }
+        if (value >= 0.01) {
+            return String.format(Locale.ROOT, "%.2f", value);
+        }
+        String formatted = String.format(Locale.ROOT, "%.4e", value);
+        return formatted.replace("e-0", "e-").replace("e+0", "e+");
     }
 }

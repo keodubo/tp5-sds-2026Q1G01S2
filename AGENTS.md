@@ -15,7 +15,7 @@
 ## Prioridad de Fuentes
 
 1. Pedido directo del usuario.
-2. `docs/TP5_Enunciado.pdf` (enunciado publicado en Campus el 2026-05-22).
+2. `docs/TP5_Enunciado.pdf` (enunciado actualizado por Campus el 2026-05-29; reemplaza la version del 2026-05-22).
 3. `docs/Guias de Formato/GuiaPresentaciones.pdf` y `docs/Guias de Formato/GuiaInformes.pdf`.
 4. Teoricas en `docs/Teoricas/`, especialmente `Teorica5a.pdf` y `Teorica5b.pdf` para TP5.
 5. Bibliografia en `docs/bibliografia/`, especialmente `docs/bibliografia/BiblioTP5/EL12286.pdf` para materia activa.
@@ -37,7 +37,7 @@ Si hay conflicto, seguir el enunciado y marcar explicitamente la inconsistencia.
 - La velocidad de animacion y postproceso no debe depender de la velocidad de simulacion.
 - El `dt` es fijo e intrinseco de la simulacion. Para sistemas no conservativos, justificarlo reduciendo `dt` hasta que los resultados cambien menos que un error aceptable.
 - Alcance actual confirmado por el usuario: implementar el Sistema 2, FitzHugh-Nagumo. No implementar Sistema 1 ni Sistema 3 salvo pedido explicito.
-- Para la presentacion final, recordar que el enunciado contiene una regla especial sobre Sistema 1 antes de Sistema 2. Si se trabaja en slides o entrega final, confirmar si hace falta incluir resultados de Sistema 1 como bloque breve; para codigo/motor, el alcance por defecto sigue siendo Sistema 2.
+- El PDF actualizado del 2026-05-29 ya no contiene la regla previa que obligaba a mostrar Sistema 1 antes del sistema principal. Si se trabaja en slides o entrega final, seguir el enunciado actualizado y confirmar alcance; para codigo/motor, el alcance por defecto sigue siendo Sistema 2.
 
 ## Sistemas del Enunciado
 
@@ -49,9 +49,8 @@ Si hay conflicto, seguir el enunciado y marcar explicitamente la inconsistencia.
 - Observable principal: parametro de orden global `r(t)`.
 - Redes:
   - Totalmente conectada: estudiar `K` en `[0, 1]`, varias realizaciones independientes, curva estacionaria `r(K)`, valor critico y tiempo de sincronizacion.
-  - Aleatoria: `Aij = 1` con probabilidad `p`, minimo 10 valores de `p` en `[0, 1]`, varias realizaciones de red y condiciones iniciales, mapas 2D de sincronizacion y tiempo vs `p, K`.
-  - Anillo: vecindad `v` en `[1, 10]` con indices periodicos, varias realizaciones, mapas 2D de sincronizacion y tiempo vs `v, K`.
-- En la presentacion, para Sistema 1 solo mostrar resultados, sin introduccion, ecuaciones de integradores, implementacion, animaciones ni conclusiones, en aproximadamente 2 diapositivas y menos de 1 minuto, antes del sistema principal que corresponda.
+  - Aleatoria: `Aij = 1` con probabilidad `p`, minimo 10 valores de `p` en `[10^-4, 10^-1]` distribuidos logaritmicamente; para el estudio inicial usar `K = 0.1`; luego mapas 2D de sincronizacion y tiempo vs `p, K`.
+  - Anillo: vecindad `v` en `[1, 10]` con indices periodicos; para el estudio inicial usar `K = 0.1`; luego mapas 2D de sincronizacion y tiempo vs `v, K`.
 
 ### Sistema 2 - FitzHugh-Nagumo
 
@@ -66,8 +65,8 @@ Si hay conflicto, seguir el enunciado y marcar explicitamente la inconsistencia.
 - Las salidas de texto deben permitir reconstruir analisis y animaciones sin rerun: tiempos, estado por neurona o variables suficientes, parametros, topologia, seed y observables directos cuando corresponda.
 - Redes:
   - Totalmente conectada: estudiar comportamiento temporal, dispersion promediada en mas de 10 realizaciones, tiempo de sincronizacion y `sigma_v` estacionaria vs `K`.
-  - Aleatoria: minimo 10 valores de `p` en `[0, 1]`, varias realizaciones de red y condiciones iniciales, mapas 2D de dispersion y tiempo vs `p, K`.
-  - Anillo: `k` en `[1, 10]`, varias realizaciones, mapas 2D de dispersion y tiempo vs `k, K`.
+  - Aleatoria: minimo 10 valores de `p` en `[10^-4, 10^-1]` distribuidos logaritmicamente; para el estudio inicial usar `K = 0.1`; luego mapas 2D de dispersion y tiempo vs `p, K`.
+  - Anillo: `k`/vecindad en `[1, 10]`; para el estudio inicial usar `K = 0.1`; luego mapas 2D de dispersion y tiempo vs vecindad y `K`.
 - Comparar tiempos de sincronizacion o llegada al estacionario entre tipos de red.
 
 ### Sistema 3 - Materia activa y presion

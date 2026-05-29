@@ -110,15 +110,15 @@ public final class Main {
     private static List<Config> sweepRuns(Config config) {
         List<Config> runs = new ArrayList<>();
         if ("complete".equals(config.topology()) || "all".equals(config.topology())) {
-            for (double k : grid01()) {
+            for (double k : couplingGrid()) {
                 for (int rep = 1; rep <= config.realizations(); rep++) {
                     runs.add(config.withSweepValues("complete", k, Double.NaN, -1, rep));
                 }
             }
         }
         if ("random".equals(config.topology()) || "all".equals(config.topology())) {
-            for (double p : grid01()) {
-                for (double k : grid01()) {
+            for (double p : probabilityGrid()) {
+                for (double k : couplingGrid()) {
                     for (int rep = 1; rep <= config.realizations(); rep++) {
                         runs.add(config.withSweepValues("random", k, p, -1, rep));
                     }
@@ -127,7 +127,7 @@ public final class Main {
         }
         if ("ring".equals(config.topology()) || "all".equals(config.topology())) {
             for (int ringK = 1; ringK <= 10; ringK++) {
-                for (double k : grid01()) {
+                for (double k : couplingGrid()) {
                     for (int rep = 1; rep <= config.realizations(); rep++) {
                         runs.add(config.withSweepValues("ring", k, Double.NaN, ringK, rep));
                     }
@@ -142,16 +142,26 @@ public final class Main {
             return String.format(Locale.ROOT, "complete K=%.2f rep=%d", run.kValue(), run.realizationIndex());
         }
         if ("random".equals(run.topology())) {
-            return String.format(Locale.ROOT, "random p=%.2f K=%.2f rep=%d", run.pValue(), run.kValue(), run.realizationIndex());
+            return String.format(Locale.ROOT, "random p=%s K=%.2f rep=%d", Config.formatProbability(run.pValue()), run.kValue(), run.realizationIndex());
         }
         return String.format(Locale.ROOT, "ring k=%d K=%.2f rep=%d", run.ringK(), run.kValue(), run.realizationIndex());
     }
 
-    private static double[] grid01() {
+    private static double[] couplingGrid() {
         double[] values = new double[11];
         for (int i = 0; i < values.length; i++) {
             values[i] = i / 10.0;
         }
+        return values;
+    }
+
+    private static double[] probabilityGrid() {
+        double[] values = new double[10];
+        for (int i = 0; i < values.length; i++) {
+            values[i] = Math.pow(10.0, -4.0 + i * (3.0 / (values.length - 1)));
+        }
+        values[0] = 1.0e-4;
+        values[values.length - 1] = 1.0e-1;
         return values;
     }
 }

@@ -3,13 +3,14 @@ import subprocess
 import sys
 from pathlib import Path
 
-from scripts.analyze_fhn_outputs import plot_ring_heatmap
+from scripts.analyze_fhn_outputs import plot_random_k01_stationary, plot_ring_heatmap, plot_ring_k01_stationary
 from scripts.analysis.fhn import (
     GroupKey,
     RunMetrics,
     aggregate_metrics,
     coverage_gaps,
     first_time_stays_below,
+    p_grid,
     summarize_series,
 )
 
@@ -88,7 +89,7 @@ def test_aggregate_metrics_preserves_missing_sync_time_fraction():
 def test_coverage_gaps_reports_missing_and_partial_expected_groups():
     groups = {
         GroupKey("complete", 0.0, None, None): [object(), object()],
-        GroupKey("random", 1.0, 0.0, None): [object()],
+        GroupKey("random", 0.1, 0.0001, None): [object()],
     }
 
     gaps = coverage_gaps(groups, expected_realizations=2)
@@ -101,13 +102,22 @@ def test_coverage_gaps_reports_missing_and_partial_expected_groups():
     random_partial = [
         gap
         for gap in gaps
-        if gap["topology"] == "random" and gap["K"] == 1.0 and gap["p"] == 0.0
+        if gap["topology"] == "random" and gap["K"] == 0.1 and gap["p"] == 0.0001
     ][0]
 
     assert complete_gap["status"] == "missing"
     assert complete_gap["present_runs"] == 0
     assert random_partial["status"] == "partial"
     assert random_partial["present_runs"] == 1
+
+
+def test_p_grid_matches_updated_logarithmic_enunciado_range():
+    values = p_grid()
+
+    assert len(values) == 10
+    assert values[0] == 0.0001
+    assert values[-1] == 0.1
+    assert np.allclose(np.diff(np.log10(values)), np.diff(np.log10(values))[0])
 
 
 def test_analysis_cli_is_runnable_as_repo_script():
@@ -141,3 +151,19 @@ def test_plot_ring_heatmap_writes_png_for_ring_summaries(tmp_path):
     assert created is True
     assert output.exists()
     assert output.stat().st_size > 0
+
+
+def test_fixed_k01_stationary_figures_use_updated_initial_study_value(tmp_path):
+    summaries = {
+        GroupKey("random", 0.1, 0.0001, None): {"tail_sigma_mean": 0.2, "tail_sigma_run_std": 0.01},
+        GroupKey("random", 0.1, 0.1, None): {"tail_sigma_mean": 0.05, "tail_sigma_run_std": 0.005},
+        GroupKey("ring", 0.1, None, 1): {"tail_sigma_mean": 0.2, "tail_sigma_run_std": 0.01},
+        GroupKey("ring", 0.1, None, 10): {"tail_sigma_mean": 0.05, "tail_sigma_run_std": 0.005},
+    }
+    random_output = tmp_path / "random.png"
+    ring_output = tmp_path / "ring.png"
+
+    assert plot_random_k01_stationary(random_output, summaries) is True
+    assert plot_ring_k01_stationary(ring_output, summaries) is True
+    assert random_output.stat().st_size > 0
+    assert ring_output.stat().st_size > 0

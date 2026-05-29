@@ -95,13 +95,26 @@ final class MainCliTest {
     @Test
     void singleRandomCommandGeneratesOutputs() throws Exception {
         int exitCode = Main.run(new String[] {
-            "single", "--topology", "random", "--K", "0.3", "--p", "0.4",
+            "single", "--topology", "random", "--K", "0.3", "--p", "0.1",
             "--N", "501", "--T", "0.1", "--dt", "0.01", "--save-interval", "0.1",
             "--output-dir", tempDir.toString()
         });
 
         assertEquals(0, exitCode);
-        Path runDir = tempDir.resolve("runs").resolve("random").resolve("p_0.40").resolve("K_0.30").resolve("seed_0001");
+        Path runDir = tempDir.resolve("runs").resolve("random").resolve("p_0.10").resolve("K_0.30").resolve("seed_0001");
+        assertTrue(Files.exists(runDir.resolve("observables.csv")));
+    }
+
+    @Test
+    void singleRandomCommandKeepsSmallProbabilitiesDistinct() throws Exception {
+        int exitCode = Main.run(new String[] {
+            "single", "--topology", "random", "--K", "0.1", "--p", "0.0001",
+            "--N", "501", "--T", "0.1", "--dt", "0.01", "--save-interval", "0.1",
+            "--output-dir", tempDir.toString()
+        });
+
+        assertEquals(0, exitCode);
+        Path runDir = tempDir.resolve("runs").resolve("random").resolve("p_1.0000e-4").resolve("K_0.10").resolve("seed_0001");
         assertTrue(Files.exists(runDir.resolve("observables.csv")));
     }
 

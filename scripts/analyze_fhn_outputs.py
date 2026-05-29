@@ -24,10 +24,12 @@ from scripts.analysis.fhn import (
     RunRecord,
     aggregate_metrics,
     coverage_gaps,
+    format_probability,
     grid01,
     group_records,
     load_records,
     mean_curve,
+    p_grid,
 )
 
 LINE_STYLES = ["-", "--", "-.", ":"]
@@ -298,44 +300,44 @@ def generate_figures(
         (
             "mean_v",
             LABEL_MEAN_V,
-            "random_K1_mean_v_timeseries.png",
-            r"Red aleatoria, $K=1$: $\langle v(t)\rangle$",
+            "random_K0p1_mean_v_timeseries.png",
+            r"Red aleatoria, $K=0.1$: $\langle v(t)\rangle$",
         ),
         (
             "sigma_v",
             LABEL_SIGMA_V,
-            "random_K1_sigma_v_timeseries.png",
-            r"Red aleatoria, $K=1$: $\sigma_v(t)$",
+            "random_K0p1_sigma_v_timeseries.png",
+            r"Red aleatoria, $K=0.1$: $\sigma_v(t)$",
         ),
     ]:
         path = figures_dir / filename
-        if plot_random_k1_timeseries(path, groups, field=field, ylabel=ylabel, title=title):
+        if plot_random_k01_timeseries(path, groups, field=field, ylabel=ylabel, title=title):
             figures.append(path)
 
-    path = figures_dir / "random_K1_stationary_vs_p.png"
-    if plot_random_k1_stationary(path, summaries):
+    path = figures_dir / "random_K0p1_stationary_vs_p.png"
+    if plot_random_k01_stationary(path, summaries):
         figures.append(path)
 
     for field, ylabel, filename, title in [
         (
             "mean_v",
             LABEL_MEAN_V,
-            "ring_K1_mean_v_timeseries.png",
-            r"Red anillo, $K=1$: $\langle v(t)\rangle$",
+            "ring_K0p1_mean_v_timeseries.png",
+            r"Red anillo, $K=0.1$: $\langle v(t)\rangle$",
         ),
         (
             "sigma_v",
             LABEL_SIGMA_V,
-            "ring_K1_sigma_v_timeseries.png",
-            r"Red anillo, $K=1$: $\sigma_v(t)$",
+            "ring_K0p1_sigma_v_timeseries.png",
+            r"Red anillo, $K=0.1$: $\sigma_v(t)$",
         ),
     ]:
         path = figures_dir / filename
-        if plot_ring_k1_timeseries(path, groups, field=field, ylabel=ylabel, title=title):
+        if plot_ring_k01_timeseries(path, groups, field=field, ylabel=ylabel, title=title):
             figures.append(path)
 
-    path = figures_dir / "ring_K1_stationary_vs_k.png"
-    if plot_ring_k1_stationary(path, summaries):
+    path = figures_dir / "ring_K0p1_stationary_vs_k.png"
+    if plot_ring_k01_stationary(path, summaries):
         figures.append(path)
 
     path = figures_dir / "available_runs_by_topology.png"
@@ -426,9 +428,7 @@ def plot_random_heatmap(
     value_name: str,
     title: str,
 ) -> bool:
-    p_values = sorted(
-        {round(key.p_value, 1) for key in summaries if key.topology == "random" and key.p_value is not None}
-    )
+    p_values = sorted({key.p_value for key in summaries if key.topology == "random" and key.p_value is not None})
     k_values = sorted({round(key.k_value, 1) for key in summaries if key.topology == "random"})
     if not p_values or not k_values:
         return False
@@ -436,7 +436,7 @@ def plot_random_heatmap(
     for key, summary in summaries.items():
         if key.topology != "random" or key.p_value is None:
             continue
-        p_index = p_values.index(round(key.p_value, 1))
+        p_index = p_values.index(key.p_value)
         k_index = k_values.index(round(key.k_value, 1))
         matrix[p_index, k_index] = float(summary[value_name])
     if np.isnan(matrix).all():
@@ -448,7 +448,7 @@ def plot_random_heatmap(
     axis.set_xlabel(LABEL_K)
     axis.set_ylabel(LABEL_P)
     axis.set_xticks(range(len(k_values)), [f"{value:.1f}" for value in k_values], rotation=45)
-    axis.set_yticks(range(len(p_values)), [f"{value:.1f}" for value in p_values])
+    axis.set_yticks(range(len(p_values)), [format_probability(value) for value in p_values])
     colorbar = fig.colorbar(image, ax=axis)
     colorbar.set_label(label_for_value(value_name))
     fig.savefig(path, dpi=160)
@@ -491,7 +491,7 @@ def plot_ring_heatmap(
     return True
 
 
-def plot_random_k1_timeseries(
+def plot_random_k01_timeseries(
     path: Path,
     groups: dict[GroupKey, list[RunRecord]],
     *,
@@ -500,7 +500,7 @@ def plot_random_k1_timeseries(
     title: str,
 ) -> bool:
     keys = sorted(
-        [key for key in groups if key.topology == "random" and round(key.k_value, 1) == 1.0],
+        [key for key in groups if key.topology == "random" and np.isclose(key.k_value, 0.1)],
         key=lambda key: -1.0 if key.p_value is None else key.p_value,
     )
     if not keys:
@@ -512,7 +512,7 @@ def plot_random_k1_timeseries(
         if curve is None:
             continue
         t, values = curve
-        axis.plot(t, values, label=f"p={key.p_value:.1f}", **style_for_series(index, color, len(t)))
+        axis.plot(t, values, label=f"p={format_probability(key.p_value)}", **style_for_series(index, color, len(t)))
     axis.set_title(title)
     axis.set_xlabel(r"$t$")
     axis.set_ylabel(ylabel)
@@ -523,7 +523,7 @@ def plot_random_k1_timeseries(
     return True
 
 
-def plot_ring_k1_timeseries(
+def plot_ring_k01_timeseries(
     path: Path,
     groups: dict[GroupKey, list[RunRecord]],
     *,
@@ -532,7 +532,7 @@ def plot_ring_k1_timeseries(
     title: str,
 ) -> bool:
     keys = sorted(
-        [key for key in groups if key.topology == "ring" and round(key.k_value, 1) == 1.0],
+        [key for key in groups if key.topology == "ring" and np.isclose(key.k_value, 0.1)],
         key=lambda key: -1 if key.ring_k is None else key.ring_k,
     )
     if not keys:
@@ -555,9 +555,9 @@ def plot_ring_k1_timeseries(
     return True
 
 
-def plot_random_k1_stationary(path: Path, summaries: dict[GroupKey, dict[str, Any]]) -> bool:
+def plot_random_k01_stationary(path: Path, summaries: dict[GroupKey, dict[str, Any]]) -> bool:
     keys = sorted(
-        [key for key in summaries if key.topology == "random" and round(key.k_value, 1) == 1.0],
+        [key for key in summaries if key.topology == "random" and np.isclose(key.k_value, 0.1)],
         key=lambda key: -1.0 if key.p_value is None else key.p_value,
     )
     if not keys:
@@ -567,19 +567,20 @@ def plot_random_k1_stationary(path: Path, summaries: dict[GroupKey, dict[str, An
     yerr = np.array([float(summaries[key]["tail_sigma_run_std"]) for key in keys if key.p_value is not None])
     fig, axis = plt.subplots(figsize=(8, 5), constrained_layout=True)
     axis.errorbar(x, y, yerr=yerr, marker="o", linewidth=1.4, capsize=3)
-    axis.set_title(r"Red aleatoria, $K=1$: $\sigma_v$ estacionaria vs $p$")
+    axis.set_title(r"Red aleatoria, $K=0.1$: $\sigma_v$ estacionaria vs $p$")
     axis.set_xlabel(LABEL_P)
     axis.set_ylabel(LABEL_SIGMA_V_STATIONARY)
-    axis.set_xticks(grid01())
+    axis.set_xscale("log")
+    axis.set_xticks(p_grid(), [format_probability(value) for value in p_grid()], rotation=45)
     axis.grid(True, alpha=0.25)
     fig.savefig(path, dpi=160)
     plt.close(fig)
     return True
 
 
-def plot_ring_k1_stationary(path: Path, summaries: dict[GroupKey, dict[str, Any]]) -> bool:
+def plot_ring_k01_stationary(path: Path, summaries: dict[GroupKey, dict[str, Any]]) -> bool:
     keys = sorted(
-        [key for key in summaries if key.topology == "ring" and round(key.k_value, 1) == 1.0],
+        [key for key in summaries if key.topology == "ring" and np.isclose(key.k_value, 0.1)],
         key=lambda key: -1 if key.ring_k is None else key.ring_k,
     )
     if not keys:
@@ -589,7 +590,7 @@ def plot_ring_k1_stationary(path: Path, summaries: dict[GroupKey, dict[str, Any]
     yerr = np.array([float(summaries[key]["tail_sigma_run_std"]) for key in keys if key.ring_k is not None])
     fig, axis = plt.subplots(figsize=(8, 5), constrained_layout=True)
     axis.errorbar(x, y, yerr=yerr, marker="o", linewidth=1.4, capsize=3)
-    axis.set_title(r"Red anillo, $K=1$: $\sigma_v$ estacionaria vs $k$")
+    axis.set_title(r"Red anillo, $K=0.1$: $\sigma_v$ estacionaria vs $k$")
     axis.set_xlabel(LABEL_RING_K)
     axis.set_ylabel(LABEL_SIGMA_V_STATIONARY)
     axis.set_xticks(range(1, 11))

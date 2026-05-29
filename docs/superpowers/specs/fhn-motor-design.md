@@ -134,7 +134,7 @@ K = 0.0, 0.1, 0.2, ..., 1.0
 Grilla de `p` para red aleatoria:
 
 ```text
-p = 0.0, 0.1, 0.2, ..., 1.0
+p = 10 valores logaritmicos entre 1e-4 y 1e-1
 ```
 
 Grilla de `k` para anillo:
@@ -147,9 +147,9 @@ Cantidad estimada de corridas para barrido completo:
 
 ```text
 complete: 11 K * 15 = 165
-random:   11 p * 11 K * 15 = 1815
+random:   10 p * 11 K * 15 = 1650
 ring:     10 k * 11 K * 15 = 1650
-total:    3630
+total:    3465
 ```
 
 ## Topologias
@@ -261,7 +261,7 @@ mvn exec:java -Dexec.args="single --topology complete --K 0.5 --N 501 --dt 0.01 
 Corrida single aleatoria:
 
 ```bash
-mvn exec:java -Dexec.args="single --topology random --K 0.5 --p 0.3 --N 501 --dt 0.01 --T 100"
+mvn exec:java -Dexec.args="single --topology random --K 0.1 --p 0.001 --N 501 --dt 0.01 --T 100"
 ```
 
 Corrida single anillo:
@@ -400,8 +400,8 @@ outputs/
           metadata.properties
           observables.csv
     random/
-      p_0.30/
-        K_0.50/
+      p_1.0000e-3/
+        K_0.10/
           seed_0001/
             metadata.properties
             observables.csv
@@ -433,9 +433,9 @@ Para regenerar:
 El sweep debe registrar progreso por consola:
 
 ```text
-[123/1815] random p=0.30 K=0.50 rep=7 START
-[123/1815] random p=0.30 K=0.50 rep=7 OK elapsed=2.4s
-[124/1815] random p=0.30 K=0.50 rep=8 SKIP existing
+[123/1650] random p=1.0000e-3 K=0.10 rep=7 START
+[123/1650] random p=1.0000e-3 K=0.10 rep=7 OK elapsed=2.4s
+[124/1650] random p=1.0000e-3 K=0.10 rep=8 SKIP existing
 ```
 
 Tambien debe escribir:

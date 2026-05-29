@@ -13,7 +13,7 @@ import numpy as np
 
 from .cli import PlannedOutputPaths
 from .graph import compute_layout
-from .model import AnimationInputError, RenderOptions, RunData
+from .model import AnimationInputError, RenderOptions, RunData, format_probability
 
 
 def ensure_ffmpeg_available() -> None:
@@ -196,7 +196,7 @@ def render_network(run: RunData, options: RenderOptions, paths: PlannedOutputPat
 def _title(run: RunData, prefix: str) -> str:
     metadata = run.metadata
     if metadata.topology == "random":
-        params = f"p={metadata.p_value:.2f}, K={metadata.k_value:.2f}"
+        params = f"p={format_probability(metadata.p_value)}, K={metadata.k_value:.2f}"
     elif metadata.topology == "ring":
         params = f"k={metadata.ring_k:02d}, K={metadata.k_value:.2f}"
     else:

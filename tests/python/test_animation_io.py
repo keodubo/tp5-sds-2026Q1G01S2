@@ -52,6 +52,29 @@ def test_random_run_id():
     assert metadata.run_id() == "random_p_0.30_K_0.20_seed_0001"
 
 
+def test_random_run_id_keeps_small_probabilities_distinct():
+    metadata = Metadata(
+        mode="single",
+        topology="random",
+        n=501,
+        k_value=0.1,
+        p_value=0.0001,
+        ring_k=None,
+        dt=0.02,
+        total_time=0.2,
+        save_interval=0.02,
+        realization=1,
+        base_seed=12345,
+        run_seed=-8485422715239165622,
+        save_states=True,
+        save_adjacency=True,
+        topology_type="RANDOM",
+        source_dir=Path("/tmp/run"),
+    )
+
+    assert metadata.run_id() == "random_p_1.0000e-4_K_0.10_seed_0001"
+
+
 def test_ring_run_id():
     metadata = Metadata(
         mode="single",

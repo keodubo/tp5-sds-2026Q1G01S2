@@ -37,12 +37,18 @@ class Metadata:
         if self.topology == "random":
             if self.p_value is None:
                 raise AnimationInputError("random metadata requires p")
-            return f"random_p_{self.p_value:.2f}_K_{self.k_value:.2f}_{seed}"
+            return f"random_p_{format_probability(self.p_value)}_K_{self.k_value:.2f}_{seed}"
         if self.topology == "ring":
             if self.ring_k is None:
                 raise AnimationInputError("ring metadata requires k")
             return f"ring_k_{self.ring_k:02d}_K_{self.k_value:.2f}_{seed}"
         raise AnimationInputError(f"unsupported topology: {self.topology}")
+
+
+def format_probability(value: float) -> str:
+    if value >= 0.01:
+        return f"{value:.2f}"
+    return f"{value:.4e}".replace("e-0", "e-").replace("e+0", "e+")
 
 
 @dataclass(frozen=True)
