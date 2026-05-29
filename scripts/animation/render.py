@@ -44,44 +44,56 @@ def render_dashboard(run: RunData, options: RenderOptions, paths: PlannedOutputP
     frame_indices = selected_frame_indices(run.states.frame_count, options.frame_stride)
     rep_index = representative_frame_index(run.states.t, options.representative_time)
 
-    fig, axes = plt.subplots(3, 1, figsize=(9, 8), constrained_layout=True)
+    fig, axes = plt.subplots(4, 1, figsize=(9, 10), constrained_layout=True)
     fig.suptitle(_title(run, "Dashboard"))
 
-    mean_axis, sigma_axis, snapshot_axis = axes
+    mean_axis, sigma_axis, v_snapshot_axis, w_snapshot_axis = axes
     mean_axis.plot(run.observables.t, run.observables.mean_v, color="#1f77b4")
-    mean_axis.set_ylabel("<v(t)>")
-    mean_axis.set_xlabel("t")
+    mean_axis.set_ylabel(r"$\langle v(t)\rangle$")
+    mean_axis.set_xlabel(r"$t$")
     mean_marker = mean_axis.axvline(run.states.t[0], color="black", linewidth=1)
 
     sigma_axis.plot(run.observables.t, run.observables.sigma_v, color="#d62728")
-    sigma_axis.set_ylabel("sigma_v(t)")
-    sigma_axis.set_xlabel("t")
+    sigma_axis.set_ylabel(r"$\sigma_v(t)$")
+    sigma_axis.set_xlabel(r"$t$")
     sigma_marker = sigma_axis.axvline(run.states.t[0], color="black", linewidth=1)
 
     node_indices = np.arange(run.states.n)
-    (snapshot_line,) = snapshot_axis.plot(node_indices, run.states.v[0], color="#2ca02c", linewidth=1)
-    snapshot_axis.set_ylabel("v_i(t)")
-    snapshot_axis.set_xlabel("i")
-    snapshot_axis.set_xlim(0, run.states.n - 1)
+    (v_snapshot_line,) = v_snapshot_axis.plot(node_indices, run.states.v[0], color="#2ca02c", linewidth=1)
+    v_snapshot_axis.set_ylabel(r"$v_i(t)$")
+    v_snapshot_axis.set_xlabel(r"$i$")
+    v_snapshot_axis.set_xlim(0, run.states.n - 1)
     vmin = float(np.min(run.states.v))
     vmax = float(np.max(run.states.v))
     if vmin == vmax:
         vmin -= 0.5
         vmax += 0.5
-    snapshot_axis.set_ylim(vmin, vmax)
-    time_text = snapshot_axis.text(0.02, 0.95, "", transform=snapshot_axis.transAxes, va="top")
+    v_snapshot_axis.set_ylim(vmin, vmax)
+
+    (w_snapshot_line,) = w_snapshot_axis.plot(node_indices, run.states.w[0], color="#9467bd", linewidth=1)
+    w_snapshot_axis.set_ylabel(r"$w_i(t)$")
+    w_snapshot_axis.set_xlabel(r"$i$")
+    w_snapshot_axis.set_xlim(0, run.states.n - 1)
+    wmin = float(np.min(run.states.w))
+    wmax = float(np.max(run.states.w))
+    if wmin == wmax:
+        wmin -= 0.5
+        wmax += 0.5
+    w_snapshot_axis.set_ylim(wmin, wmax)
+    time_text = v_snapshot_axis.text(0.02, 0.95, "", transform=v_snapshot_axis.transAxes, va="top")
 
     def update(frame_index: int):
         t = float(run.states.t[frame_index])
         mean_marker.set_xdata([t, t])
         sigma_marker.set_xdata([t, t])
-        snapshot_line.set_ydata(run.states.v[frame_index])
+        v_snapshot_line.set_ydata(run.states.v[frame_index])
+        w_snapshot_line.set_ydata(run.states.w[frame_index])
         obs_index = nearest_observable_index(run.observables.t, t)
         time_text.set_text(
-            f"t={t:.3f}, <v>={run.observables.mean_v[obs_index]:.4f}, "
-            f"sigma_v={run.observables.sigma_v[obs_index]:.4f}"
+            f"$t={t:.3f}$, $\\langle v\\rangle={run.observables.mean_v[obs_index]:.4f}$, "
+            f"$\\sigma_v={run.observables.sigma_v[obs_index]:.4f}$"
         )
-        return mean_marker, sigma_marker, snapshot_line, time_text
+        return mean_marker, sigma_marker, v_snapshot_line, w_snapshot_line, time_text
 
     try:
         animation = FuncAnimation(fig, update, frames=frame_indices, blit=False)
