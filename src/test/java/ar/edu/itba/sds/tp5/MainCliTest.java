@@ -7,6 +7,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -80,6 +81,27 @@ final class MainCliTest {
         assertTrue(Files.exists(runDir.resolve("observables.csv")));
         assertTrue(Files.exists(runDir.resolve("states.csv")));
         assertTrue(Files.exists(runDir.resolve("adjacency.csv")));
+        String metadata = Files.readString(runDir.resolve("metadata.properties"));
+        assertTrue(metadata.contains("initialStateMin=-0.5"));
+        assertTrue(metadata.contains("initialStateMax=0.5"));
+    }
+
+    @Test
+    void completedRejectsOutputsWithOldInitialRangeMetadata() throws Exception {
+        Config config = Config.parse(new String[] {
+            "smoke", "--topology", "complete", "--K", "0.2",
+            "--output-dir", tempDir.toString()
+        });
+        Topology topology = Topology.complete(config.n());
+        OutputWriter.writeRun(config, topology, FhnSimulation.run(config, topology));
+
+        Path metadataPath = config.runDirectory().resolve("metadata.properties");
+        String oldMetadata = Files.readString(metadataPath)
+            .replace("initialStateMin=-0.5", "initialStateMin=-0.05")
+            .replace("initialStateMax=0.5", "initialStateMax=0.05");
+        Files.writeString(metadataPath, oldMetadata);
+
+        assertFalse(OutputWriter.completed(config));
     }
 
     @Test

@@ -58,7 +58,8 @@ Si hay conflicto, seguir el enunciado y marcar explicitamente la inconsistencia.
 - N debe ser mayor a 500.
 - Variables por neurona: potencial `v_i` y recuperacion `w_i`.
 - Parametros del enunciado: `I = 0.5`, `epsilon = 0.08`, `a = 0.7`, `b = 0.8`.
-- Condiciones iniciales uniformes para `v_i` y `w_i` en `[-0.05, 0.05]`.
+- Condiciones iniciales uniformes para `v_i` y `w_i` en `[-0.5, 0.5]`, por indicacion del profesor del 2026-06-07; esta indicacion reemplaza el rango del enunciado.
+- Usar una `runSeed` distinta para cada combinacion de parametros y realizacion, manteniendo reproducibilidad para poder resumir corridas.
 - Observables: potencial promedio `<v(t)>` y dispersion espacial `sigma_v(t)`.
 - Definir un umbral de dispersion para sincronizacion.
 - El motor debe cubrir las tres topologias pedidas para Sistema 2: red totalmente conectada, red aleatoria y red anillo.

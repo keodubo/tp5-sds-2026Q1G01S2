@@ -10,8 +10,8 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT_DIR"
 
 THREADS="${THREADS:-5}"
-OUTPUT_DIR="${OUTPUT_DIR:-outputs/fhn-sweep-T500-dt005-observables}"
-BASE_SEED="${BASE_SEED:-20260527}"
+OUTPUT_DIR="${OUTPUT_DIR:-outputs/fhn-sweep-T500-dt005-init05-observables}"
+BASE_SEED="${BASE_SEED:-20260607}"
 
 EXTRA_ARGS=()
 if [[ "${OVERWRITE:-0}" == "1" ]]; then
@@ -36,6 +36,8 @@ echo "TP5 FHN sweep"
 echo "  output_dir: $OUTPUT_DIR"
 echo "  threads:    $THREADS"
 echo "  base_seed:  $BASE_SEED"
+echo "  initial:    v_i, w_i uniform in [-0.5, 0.5]"
+echo "  seeds:      distinct runSeed per parameter combination and realization"
 echo "  mode:       observables only"
 echo
 echo "Compiling..."

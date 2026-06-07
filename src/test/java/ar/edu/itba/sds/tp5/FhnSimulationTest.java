@@ -8,6 +8,7 @@ import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 final class FhnSimulationTest {
@@ -26,6 +27,45 @@ final class FhnSimulationTest {
         FhnSimulation.Result second = FhnSimulation.run(config, topology);
 
         assertEquals(first.observables(), second.observables());
+    }
+
+    @Test
+    void initialStatesUseProfessorRequestedUniformRange() {
+        Config config = Config.parse(new String[] {
+            "smoke", "--topology", "complete", "--K", "0.2",
+            "--base-seed", "7", "--save-states", "--output-dir", tempDir.toString()
+        });
+
+        FhnSimulation.Result result = FhnSimulation.run(config, Topology.complete(config.n()));
+        List<FhnSimulation.StateRow> initialStates = result.states().stream()
+            .filter(row -> row.t() == 0.0)
+            .toList();
+
+        assertEquals(config.n(), initialStates.size());
+        assertTrue(initialStates.stream().allMatch(row ->
+            row.v() >= -0.5 && row.v() < 0.5 && row.w() >= -0.5 && row.w() < 0.5
+        ));
+        assertTrue(initialStates.stream().anyMatch(row -> Math.abs(row.v()) > 0.05 || Math.abs(row.w()) > 0.05));
+    }
+
+    @Test
+    void runSeedsDifferAcrossCouplingsAndRealizations() {
+        Config first = Config.parse(new String[] {
+            "smoke", "--topology", "complete", "--K", "0.1",
+            "--realization", "1", "--output-dir", tempDir.toString()
+        });
+        Config differentCoupling = Config.parse(new String[] {
+            "smoke", "--topology", "complete", "--K", "0.2",
+            "--realization", "1", "--output-dir", tempDir.toString()
+        });
+        Config differentRealization = Config.parse(new String[] {
+            "smoke", "--topology", "complete", "--K", "0.1",
+            "--realization", "2", "--output-dir", tempDir.toString()
+        });
+
+        assertNotEquals(first.runSeed(), differentCoupling.runSeed());
+        assertNotEquals(first.runSeed(), differentRealization.runSeed());
+        assertNotEquals(differentCoupling.runSeed(), differentRealization.runSeed());
     }
 
     @Test

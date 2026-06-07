@@ -8,8 +8,8 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT_DIR"
 
-OUTPUT_DIR="${OUTPUT_DIR:-outputs/fhn-v1-professor-samples-2026-05-29}"
-BASE_SEED="${BASE_SEED:-20260529}"
+OUTPUT_DIR="${OUTPUT_DIR:-outputs/fhn-v2-professor-samples-init05-2026-06-07}"
+BASE_SEED="${BASE_SEED:-20260607}"
 N="${N:-501}"
 T="${T:-200}"
 DT="${DT:-0.005}"
@@ -27,7 +27,7 @@ if [[ "${OVERWRITE:-0}" == "1" ]]; then
   EXTRA_ARGS+=(--overwrite)
 fi
 
-echo "TP5 FHN professor sample v1"
+echo "TP5 FHN professor sample v2"
 echo "  output_dir:     $OUTPUT_DIR"
 echo "  N:              $N"
 echo "  T:              $T"
@@ -35,6 +35,8 @@ echo "  dt:             $DT"
 echo "  save_interval:  $SAVE_INTERVAL"
 echo "  realizations:   $REALIZATIONS"
 echo "  base_seed:      $BASE_SEED"
+echo "  initial:        v_i, w_i uniform in [-0.5, 0.5]"
+echo "  seeds:          distinct runSeed per parameter combination and realization"
 echo "  mode:           observables only"
 echo
 
@@ -101,5 +103,5 @@ if [[ "${DRY_RUN:-0}" == "1" ]]; then
   echo "DRY_RUN=1: no runs started."
 else
   echo
-  echo "OK v1 sample outputs: $OUTPUT_DIR"
+  echo "OK v2 sample outputs: $OUTPUT_DIR"
 fi

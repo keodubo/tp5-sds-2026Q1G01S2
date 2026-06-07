@@ -6,6 +6,8 @@ import java.util.Random;
 
 public final class FhnSimulation {
     private static final double EPS = 1e-12;
+    static final double INITIAL_STATE_MIN = -0.5;
+    static final double INITIAL_STATE_MAX = 0.5;
     private static final double I_EXT = 0.5;
     private static final double EPSILON = 0.08;
     private static final double A = 0.7;
@@ -79,9 +81,10 @@ public final class FhnSimulation {
 
     private static void initialize(double[] v, double[] w, long seed) {
         Random random = new Random(seed);
+        double width = INITIAL_STATE_MAX - INITIAL_STATE_MIN;
         for (int i = 0; i < v.length; i++) {
-            v[i] = -0.05 + 0.1 * random.nextDouble();
-            w[i] = -0.05 + 0.1 * random.nextDouble();
+            v[i] = INITIAL_STATE_MIN + width * random.nextDouble();
+            w[i] = INITIAL_STATE_MIN + width * random.nextDouble();
         }
     }
 
