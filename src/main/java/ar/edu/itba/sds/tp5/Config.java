@@ -23,7 +23,8 @@ public record Config(
     boolean saveStates,
     boolean saveAdjacency,
     boolean overwrite,
-    Path outputDir
+    Path outputDir,
+    double[] couplingValues
 ) {
     public static Config parse(String[] args) {
         if (args.length == 0) {
@@ -75,7 +76,8 @@ public record Config(
             saveStates,
             saveAdjacency,
             overwrite,
-            Path.of(values.getOrDefault("output-dir", "outputs"))
+            Path.of(values.getOrDefault("output-dir", "outputs")),
+            parseCouplingValues(values.get("k-values"))
         );
         config.validate();
         return config;
@@ -131,6 +133,16 @@ public record Config(
         if (threads < 1) {
             throw new IllegalArgumentException("threads must be positive");
         }
+        if (couplingValues != null) {
+            if (couplingValues.length == 0) {
+                throw new IllegalArgumentException("--k-values must list at least one value");
+            }
+            for (double k : couplingValues) {
+                if (Double.isNaN(k) || k < 0.0 || k > 1.0) {
+                    throw new IllegalArgumentException("--k-values entries must be in [0, 1]");
+                }
+            }
+        }
         Objects.requireNonNull(outputDir, "outputDir");
     }
 
@@ -171,12 +183,13 @@ public record Config(
     public Config withSweepValues(String newTopology, double newK, double newP, int newRingK, int newRealization) {
         return new Config(
             mode, newTopology, n, newK, newP, newRingK, dt, totalTime, saveInterval,
-            realizations, baseSeed, newRealization, threads, saveStates, saveAdjacency, overwrite, outputDir
+            realizations, baseSeed, newRealization, threads, saveStates, saveAdjacency, overwrite, outputDir,
+            couplingValues
         );
     }
 
     private String kDir() {
-        return String.format(Locale.ROOT, "K_%.2f", kValue);
+        return "K_" + formatCoupling(kValue);
     }
 
     private String pDir() {
@@ -199,11 +212,38 @@ public record Config(
         return values.containsKey(key) ? Double.parseDouble(values.get(key)) : defaultValue;
     }
 
+    private static double[] parseCouplingValues(String raw) {
+        if (raw == null || raw.isBlank()) {
+            return null;
+        }
+        String[] parts = raw.split(",");
+        double[] values = new double[parts.length];
+        for (int i = 0; i < parts.length; i++) {
+            values[i] = Double.parseDouble(parts[i].trim());
+        }
+        return values;
+    }
+
     static String formatProbability(double value) {
         if (Double.isNaN(value)) {
             return "";
         }
         if (value >= 0.01) {
+            return String.format(Locale.ROOT, "%.2f", value);
+        }
+        String formatted = String.format(Locale.ROOT, "%.4e", value);
+        return formatted.replace("e-0", "e-").replace("e+0", "e+");
+    }
+
+    static String formatCoupling(double value) {
+        if (Double.isNaN(value)) {
+            return "";
+        }
+        // Keep two-decimal names for the standard grid (0.00, 0.10, ..., 1.00) so existing
+        // outputs and analysis scripts are unaffected. Small couplings (e.g. 1e-3, 1e-4) cannot
+        // be distinguished at two decimals, so they fall back to scientific notation like p.
+        double scaledHundred = value * 100.0;
+        if (Math.abs(scaledHundred - Math.rint(scaledHundred)) < 1e-9) {
             return String.format(Locale.ROOT, "%.2f", value);
         }
         String formatted = String.format(Locale.ROOT, "%.4e", value);

@@ -1,0 +1,22 @@
+topology,p,k,K_c_estimate,K_c_low,K_c_high,describe
+complete,,,,0.0,0.0001,< 1.0e-04  (entre 0 y 1.0e-04)
+random,0.0001,,,1.0,,sin sincronizacion dentro de T
+random,0.0002154,,,1.0,,sin sincronizacion dentro de T
+random,0.0004642,,,1.0,,sin sincronizacion dentro de T
+random,0.001,,,1.0,,sin sincronizacion dentro de T
+random,0.002154,,,1.0,,sin sincronizacion dentro de T
+random,0.004642,,,1.0,,sin sincronizacion dentro de T
+random,0.01,,0.2449489742783178,0.2,0.3,0.245  (entre 0.2 y 0.3)
+random,0.02154,,0.0031622776601683794,0.001,0.01,3.2e-03  (entre 1.0e-03 y 0.01)
+random,0.04642,,0.0031622776601683794,0.001,0.01,3.2e-03  (entre 1.0e-03 y 0.01)
+random,0.1,,0.00031622776601683794,0.0001,0.001,3.2e-04  (entre 1.0e-04 y 1.0e-03)
+ring,,1,0.4472135954999579,0.4,0.5,0.447  (entre 0.4 y 0.5)
+ring,,2,0.14142135623730953,0.1,0.2,0.141  (entre 0.1 y 0.2)
+ring,,3,0.03162277660168379,0.01,0.1,0.0316  (entre 0.01 y 0.1)
+ring,,4,0.03162277660168379,0.01,0.1,0.0316  (entre 0.01 y 0.1)
+ring,,5,0.03162277660168379,0.01,0.1,0.0316  (entre 0.01 y 0.1)
+ring,,6,0.03162277660168379,0.01,0.1,0.0316  (entre 0.01 y 0.1)
+ring,,7,0.03162277660168379,0.01,0.1,0.0316  (entre 0.01 y 0.1)
+ring,,8,0.03162277660168379,0.01,0.1,0.0316  (entre 0.01 y 0.1)
+ring,,9,0.03162277660168379,0.01,0.1,0.0316  (entre 0.01 y 0.1)
+ring,,10,0.0031622776601683794,0.001,0.01,3.2e-03  (entre 1.0e-03 y 0.01)

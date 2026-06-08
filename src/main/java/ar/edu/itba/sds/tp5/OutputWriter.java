@@ -119,9 +119,9 @@ public final class OutputWriter {
             }
             writer.write(String.format(
                 Locale.ROOT,
-                "%s,%.2f,%s,%s,%d,%d,%d,%s,%s",
+                "%s,%s,%s,%s,%d,%d,%d,%s,%s",
                 config.topology(),
-                config.kValue(),
+                Config.formatCoupling(config.kValue()),
                 Config.formatProbability(config.pValue()),
                 config.ringK() < 0 ? "" : Integer.toString(config.ringK()),
                 config.realizationIndex(),
