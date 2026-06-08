@@ -65,9 +65,10 @@ Si hay conflicto, seguir el enunciado y marcar explicitamente la inconsistencia.
 - El motor debe cubrir las tres topologias pedidas para Sistema 2: red totalmente conectada, red aleatoria y red anillo.
 - Las salidas de texto deben permitir reconstruir analisis y animaciones sin rerun: tiempos, estado por neurona o variables suficientes, parametros, topologia, seed y observables directos cuando corresponda.
 - Redes:
-  - Totalmente conectada: estudiar comportamiento temporal, dispersion promediada en mas de 10 realizaciones, tiempo de sincronizacion y `sigma_v` estacionaria vs `K`.
+  - Totalmente conectada: estudiar comportamiento temporal, dispersion promediada en mas de 10 realizaciones, tiempo de sincronizacion y `sigma_v` estacionaria vs `K`. Por indicacion del profesor del 2026-06-08, agregar un barrido fino con `K=0` como referencia y valores positivos logaritmicos entre `10^-4` y `10^-1`.
   - Aleatoria: minimo 10 valores de `p` en `[10^-4, 10^-1]` distribuidos logaritmicamente; para el estudio inicial usar `K = 0.1`; luego mapas 2D de dispersion y tiempo vs `p, K`.
   - Anillo: `k`/vecindad en `[1, 10]`; para el estudio inicial usar `K = 0.1`; luego mapas 2D de dispersion y tiempo vs vecindad y `K`.
+- Para las figuras de evolucion temporal que comparan acoplamientos, mostrar solo `K = 0`, `K = 0.5` y `K = 1`, por indicacion del profesor del 2026-06-08.
 - Comparar tiempos de sincronizacion o llegada al estacionario entre tipos de red.
 
 ### Sistema 3 - Materia activa y presion

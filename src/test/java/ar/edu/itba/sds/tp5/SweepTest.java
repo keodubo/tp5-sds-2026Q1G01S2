@@ -67,4 +67,22 @@ final class SweepTest {
         assertTrue(Files.exists(tempDir.resolve("runs").resolve("ring").resolve("k_01").resolve("K_0.00").resolve("seed_0001").resolve("observables.csv")));
         assertTrue(Files.exists(tempDir.resolve("runs").resolve("ring").resolve("k_10").resolve("K_1.00").resolve("seed_0001").resolve("observables.csv")));
     }
+
+    @Test
+    void completeLogSweepUsesZeroReferenceAndDistinctPositiveLogValues() throws Exception {
+        int exitCode = Main.run(new String[] {
+            "complete-log-sweep", "--topology", "complete", "--N", "501",
+            "--T", "0.01", "--dt", "0.01", "--save-interval", "0.01",
+            "--realizations", "1", "--threads", "1", "--output-dir", tempDir.toString()
+        });
+
+        assertEquals(0, exitCode);
+        Path runs = tempDir.resolve("runs").resolve("complete");
+        try (var directories = Files.list(runs)) {
+            assertEquals(14, directories.count());
+        }
+        assertTrue(Files.exists(runs.resolve("K_0.00").resolve("seed_0001").resolve("observables.csv")));
+        assertTrue(Files.exists(runs.resolve("K_1.0000e-4").resolve("seed_0001").resolve("observables.csv")));
+        assertTrue(Files.exists(runs.resolve("K_0.10").resolve("seed_0001").resolve("observables.csv")));
+    }
 }

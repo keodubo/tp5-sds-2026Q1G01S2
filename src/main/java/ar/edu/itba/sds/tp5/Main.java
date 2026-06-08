@@ -29,10 +29,10 @@ public final class Main {
             runOne(config);
             return 0;
         }
-        if ("sweep".equals(config.mode())) {
+        if ("sweep".equals(config.mode()) || "complete-log-sweep".equals(config.mode())) {
             return runSweep(config);
         }
-        throw new IllegalArgumentException("mode must be smoke, single, or sweep");
+        throw new IllegalArgumentException("mode must be smoke, single, sweep, or complete-log-sweep");
     }
 
     private static void runOne(Config config) throws Exception {
@@ -109,6 +109,14 @@ public final class Main {
 
     private static List<Config> sweepRuns(Config config) {
         List<Config> runs = new ArrayList<>();
+        if ("complete-log-sweep".equals(config.mode())) {
+            for (double k : completeLogCouplingGrid()) {
+                for (int rep = 1; rep <= config.realizations(); rep++) {
+                    runs.add(config.withSweepValues("complete", k, Double.NaN, -1, rep));
+                }
+            }
+            return runs;
+        }
         if ("complete".equals(config.topology()) || "all".equals(config.topology())) {
             for (double k : couplingGrid()) {
                 for (int rep = 1; rep <= config.realizations(); rep++) {
@@ -139,12 +147,12 @@ public final class Main {
 
     private static String describe(Config run) {
         if ("complete".equals(run.topology())) {
-            return String.format(Locale.ROOT, "complete K=%.2f rep=%d", run.kValue(), run.realizationIndex());
+            return String.format(Locale.ROOT, "complete K=%s rep=%d", Config.formatCoupling(run.kValue()), run.realizationIndex());
         }
         if ("random".equals(run.topology())) {
-            return String.format(Locale.ROOT, "random p=%s K=%.2f rep=%d", Config.formatProbability(run.pValue()), run.kValue(), run.realizationIndex());
+            return String.format(Locale.ROOT, "random p=%s K=%s rep=%d", Config.formatProbability(run.pValue()), Config.formatCoupling(run.kValue()), run.realizationIndex());
         }
-        return String.format(Locale.ROOT, "ring k=%d K=%.2f rep=%d", run.ringK(), run.kValue(), run.realizationIndex());
+        return String.format(Locale.ROOT, "ring k=%d K=%s rep=%d", run.ringK(), Config.formatCoupling(run.kValue()), run.realizationIndex());
     }
 
     private static double[] couplingGrid() {
@@ -161,6 +169,17 @@ public final class Main {
             values[i] = Math.pow(10.0, -4.0 + i * (3.0 / (values.length - 1)));
         }
         values[0] = 1.0e-4;
+        values[values.length - 1] = 1.0e-1;
+        return values;
+    }
+
+    private static double[] completeLogCouplingGrid() {
+        double[] values = new double[14];
+        values[0] = 0.0;
+        for (int i = 1; i < values.length; i++) {
+            values[i] = Math.pow(10.0, -4.0 + (i - 1) * (3.0 / (values.length - 2)));
+        }
+        values[1] = 1.0e-4;
         values[values.length - 1] = 1.0e-1;
         return values;
     }

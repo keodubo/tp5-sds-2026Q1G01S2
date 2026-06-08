@@ -3,7 +3,16 @@ import subprocess
 import sys
 from pathlib import Path
 
-from scripts.analyze_fhn_outputs import plot_random_k01_stationary, plot_ring_heatmap, plot_ring_k01_stationary
+from scripts.analyze_fhn_outputs import (
+    is_temporal_k,
+    plot_complete_log_errorbar,
+    plot_random_k01_observables,
+    plot_random_k01_stationary,
+    plot_ring_heatmap,
+    plot_ring_k01_observables,
+    plot_ring_k01_stationary,
+    plot_sync_time_comparison,
+)
 from scripts.analysis.fhn import (
     GroupKey,
     RunMetrics,
@@ -130,6 +139,14 @@ def test_analysis_cli_is_runnable_as_repo_script():
 
     assert result.returncode == 0
     assert "--input-dir" in result.stdout
+    assert "--complete-log-input-dir" in result.stdout
+
+
+def test_temporal_figures_use_only_professor_requested_k_values():
+    assert is_temporal_k(0.0) is True
+    assert is_temporal_k(0.5) is True
+    assert is_temporal_k(1.0) is True
+    assert is_temporal_k(0.1) is False
 
 
 def test_plot_ring_heatmap_writes_png_for_ring_summaries(tmp_path):
@@ -167,3 +184,74 @@ def test_fixed_k01_stationary_figures_use_updated_initial_study_value(tmp_path):
     assert plot_ring_k01_stationary(ring_output, summaries) is True
     assert random_output.stat().st_size > 0
     assert ring_output.stat().st_size > 0
+
+
+def test_fixed_k01_observable_figures_use_only_provided_summary_values(tmp_path):
+    metric_values = {
+        "tail_mean_v_mean": 0.2,
+        "tail_mean_v_run_std": 0.01,
+        "tail_sigma_mean": 0.05,
+        "tail_sigma_run_std": 0.005,
+    }
+    summaries = {
+        GroupKey("random", 0.1, 0.0001, None): metric_values,
+        GroupKey("random", 0.1, 0.1, None): metric_values,
+        GroupKey("ring", 0.1, None, 1): metric_values,
+        GroupKey("ring", 0.1, None, 10): metric_values,
+    }
+    random_output = tmp_path / "random_observables.png"
+    ring_output = tmp_path / "ring_observables.png"
+
+    assert plot_random_k01_observables(random_output, summaries) is True
+    assert plot_ring_k01_observables(ring_output, summaries) is True
+    assert random_output.stat().st_size > 0
+    assert ring_output.stat().st_size > 0
+
+
+def test_sync_time_comparison_writes_png_for_explicit_representative_networks(tmp_path):
+    metric_values = {"sync_time_mean": 4.0, "sync_time_std": 0.5}
+    summaries = {
+        GroupKey("complete", 0.1, None, None): metric_values,
+        GroupKey("random", 0.1, 0.1, None): metric_values,
+        GroupKey("ring", 0.1, None, 10): metric_values,
+    }
+    output = tmp_path / "comparison.png"
+
+    created = plot_sync_time_comparison(
+        output,
+        summaries,
+        representative_p=0.1,
+        representative_ring_k=10,
+    )
+
+    assert created is True
+    assert output.stat().st_size > 0
+
+
+def test_complete_log_figure_uses_positive_k_and_accepts_zero_reference(tmp_path):
+    summaries = {
+        GroupKey("complete", 0.0, None, None): {
+            "tail_sigma_mean": 0.8,
+            "tail_sigma_run_std": 0.02,
+        },
+        GroupKey("complete", 0.0001, None, None): {
+            "tail_sigma_mean": 0.7,
+            "tail_sigma_run_std": 0.02,
+        },
+        GroupKey("complete", 0.1, None, None): {
+            "tail_sigma_mean": 0.001,
+            "tail_sigma_run_std": 0.0001,
+        },
+    }
+    output = tmp_path / "complete_log.png"
+
+    created = plot_complete_log_errorbar(
+        output,
+        summaries,
+        value_name="tail_sigma_mean",
+        ylabel="sigma",
+        title="Complete log test",
+    )
+
+    assert created is True
+    assert output.stat().st_size > 0

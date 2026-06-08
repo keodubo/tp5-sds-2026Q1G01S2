@@ -54,6 +54,33 @@ final class MainCliTest {
     }
 
     @Test
+    void completeLogSweepRequiresCompleteTopology() {
+        IllegalArgumentException ex = assertThrows(
+            IllegalArgumentException.class,
+            () -> Config.parse(new String[] {
+                "complete-log-sweep", "--topology", "ring", "--output-dir", tempDir.toString()
+            })
+        );
+        assertEquals("complete-log-sweep requires --topology complete", ex.getMessage());
+    }
+
+    @Test
+    void smallCouplingsUseDistinctDirectoryNames() {
+        Config first = Config.parse(new String[] {
+            "single", "--topology", "complete", "--K", "0.0001", "--N", "501",
+            "--output-dir", tempDir.toString()
+        });
+        Config second = Config.parse(new String[] {
+            "single", "--topology", "complete", "--K", "0.0001778279", "--N", "501",
+            "--output-dir", tempDir.toString()
+        });
+
+        assertTrue(first.runDirectory().toString().contains("K_1.0000e-4"));
+        assertTrue(second.runDirectory().toString().contains("K_1.7783e-4"));
+        assertFalse(first.runDirectory().equals(second.runDirectory()));
+    }
+
+    @Test
     void rejectsNaNTimeParameters() {
         IllegalArgumentException ex = assertThrows(
             IllegalArgumentException.class,

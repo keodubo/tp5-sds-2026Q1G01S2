@@ -82,14 +82,15 @@ public record Config(
     }
 
     private void validate() {
-        if (!mode.equals("smoke") && !mode.equals("single") && !mode.equals("sweep")) {
-            throw new IllegalArgumentException("mode must be smoke, single, or sweep");
+        if (!mode.equals("smoke") && !mode.equals("single") && !mode.equals("sweep")
+            && !mode.equals("complete-log-sweep")) {
+            throw new IllegalArgumentException("mode must be smoke, single, sweep, or complete-log-sweep");
         }
         if (mode.equals("single") && topology == null) {
             throw new IllegalArgumentException("single requires --topology");
         }
-        if (mode.equals("sweep") && topology == null) {
-            throw new IllegalArgumentException("sweep requires --topology");
+        if ((mode.equals("sweep") || mode.equals("complete-log-sweep")) && topology == null) {
+            throw new IllegalArgumentException(mode + " requires --topology");
         }
         if (topology != null && !topology.equals("complete") && !topology.equals("random")
             && !topology.equals("ring") && !topology.equals("all")) {
@@ -97,6 +98,9 @@ public record Config(
         }
         if ("all".equals(topology) && !mode.equals("sweep")) {
             throw new IllegalArgumentException("all is only valid for sweep");
+        }
+        if (mode.equals("complete-log-sweep") && !"complete".equals(topology)) {
+            throw new IllegalArgumentException("complete-log-sweep requires --topology complete");
         }
         if (!mode.equals("smoke") && n <= 500) {
             throw new IllegalArgumentException("N must be greater than 500 for production modes");
@@ -176,7 +180,7 @@ public record Config(
     }
 
     private String kDir() {
-        return String.format(Locale.ROOT, "K_%.2f", kValue);
+        return "K_" + formatCoupling(kValue);
     }
 
     private String pDir() {
@@ -204,6 +208,15 @@ public record Config(
             return "";
         }
         if (value >= 0.01) {
+            return String.format(Locale.ROOT, "%.2f", value);
+        }
+        String formatted = String.format(Locale.ROOT, "%.4e", value);
+        return formatted.replace("e-0", "e-").replace("e+0", "e+");
+    }
+
+    static String formatCoupling(double value) {
+        double coarseValue = Math.rint(value * 10.0) / 10.0;
+        if (Math.abs(value - coarseValue) < 1.0e-12) {
             return String.format(Locale.ROOT, "%.2f", value);
         }
         String formatted = String.format(Locale.ROOT, "%.4e", value);
