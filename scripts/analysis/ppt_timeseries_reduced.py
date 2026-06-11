@@ -114,8 +114,8 @@ def plot_timeseries(records, series, observable: str, ylabel: str, out: Path,
     ax.set_xlabel(X_LABEL)
     ax.set_ylabel(ylabel)
     ax.grid(alpha=0.25)
-    # legend as a framed "card" inside the axes, like the original slides
-    ax.legend(loc="center left", framealpha=0.92, fancybox=True, borderpad=0.8,
+    # legend as a framed "card" inside the axes, anchored in the top-right corner.
+    ax.legend(loc="upper right", framealpha=0.92, fancybox=True, borderpad=0.8,
               labelspacing=0.5)
     fig.tight_layout()
     fig.savefig(out, dpi=160)
