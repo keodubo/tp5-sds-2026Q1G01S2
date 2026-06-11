@@ -6,8 +6,6 @@ import java.util.Random;
 
 public final class FhnSimulation {
     private static final double EPS = 1e-12;
-    static final double INITIAL_STATE_MIN = -0.5;
-    static final double INITIAL_STATE_MAX = 0.5;
     private static final double I_EXT = 0.5;
     private static final double EPSILON = 0.08;
     private static final double A = 0.7;
@@ -46,7 +44,7 @@ public final class FhnSimulation {
         int n = config.n();
         double[] v = new double[n];
         double[] w = new double[n];
-        initialize(v, w, config.runSeed());
+        initialize(v, w, config.runSeed(), config.initialStateMin(), config.initialStateMax());
 
         List<Observable> observables = new ArrayList<>();
         List<StateRow> states = config.saveStates() ? new ArrayList<>() : List.of();
@@ -79,12 +77,12 @@ public final class FhnSimulation {
         );
     }
 
-    private static void initialize(double[] v, double[] w, long seed) {
+    private static void initialize(double[] v, double[] w, long seed, double initialStateMin, double initialStateMax) {
         Random random = new Random(seed);
-        double width = INITIAL_STATE_MAX - INITIAL_STATE_MIN;
+        double width = initialStateMax - initialStateMin;
         for (int i = 0; i < v.length; i++) {
-            v[i] = INITIAL_STATE_MIN + width * random.nextDouble();
-            w[i] = INITIAL_STATE_MIN + width * random.nextDouble();
+            v[i] = initialStateMin + width * random.nextDouble();
+            w[i] = initialStateMin + width * random.nextDouble();
         }
     }
 
@@ -106,8 +104,10 @@ public final class FhnSimulation {
     private static void derivatives(double[] v, double[] w, Topology topology, double k, double[] dv, double[] dw) {
         for (int i = 0; i < v.length; i++) {
             double coupling = 0.0;
-            for (int j : topology.activeNeighbors(i)) {
-                coupling += v[j] - v[i];
+            if (k != 0.0) {
+                for (int j : topology.activeNeighbors(i)) {
+                    coupling += v[j] - v[i];
+                }
             }
             dv[i] = v[i] - (v[i] * v[i] * v[i]) / 3.0 - w[i] + I_EXT + k * coupling;
             dw[i] = EPSILON * (v[i] + A - B * w[i]);

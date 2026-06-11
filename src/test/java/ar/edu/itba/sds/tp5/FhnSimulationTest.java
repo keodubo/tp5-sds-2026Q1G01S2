@@ -49,6 +49,28 @@ final class FhnSimulationTest {
     }
 
     @Test
+    void initialStatesRespectRequestedUniformRange() {
+        Config config = Config.parse(new String[] {
+            "smoke", "--topology", "complete", "--K", "0.2",
+            "--base-seed", "7", "--save-states",
+            "--initial-state-min", "-0.05", "--initial-state-max", "0.05",
+            "--output-dir", tempDir.toString()
+        });
+
+        FhnSimulation.Result result = FhnSimulation.run(config, Topology.complete(config.n()));
+        List<FhnSimulation.StateRow> initialStates = result.states().stream()
+            .filter(row -> row.t() == 0.0)
+            .toList();
+
+        assertEquals(-0.05, config.initialStateMin());
+        assertEquals(0.05, config.initialStateMax());
+        assertEquals(config.n(), initialStates.size());
+        assertTrue(initialStates.stream().allMatch(row ->
+            row.v() >= -0.05 && row.v() < 0.05 && row.w() >= -0.05 && row.w() < 0.05
+        ));
+    }
+
+    @Test
     void runSeedsDifferAcrossCouplingsAndRealizations() {
         Config first = Config.parse(new String[] {
             "smoke", "--topology", "complete", "--K", "0.1",

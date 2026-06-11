@@ -1,0 +1,3 @@
+condition,initial_min,initial_max,run_count,sigma_v_0_mean,tail_sigma_v_mean,tail_sigma_v_run_std,sync_count,sync_threshold
+angosta,-0.05,0.05,15,0.0284202791799,0.0210274161398,0.000621787284642,15,0.01
+ancha,-0.5,0.5,15,0.284202791799,0.865031990202,0.0322196139541,0,0.01

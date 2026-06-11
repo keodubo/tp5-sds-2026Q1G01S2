@@ -87,6 +87,23 @@ final class MainCliTest {
     }
 
     @Test
+    void outputWriterCreatesMetadataWithRequestedInitialRange() throws Exception {
+        Config config = Config.parse(new String[] {
+            "smoke", "--topology", "complete", "--K", "0.2",
+            "--initial-state-min", "-0.05", "--initial-state-max", "0.05",
+            "--output-dir", tempDir.toString()
+        });
+        Topology topology = Topology.complete(config.n());
+
+        OutputWriter.writeRun(config, topology, FhnSimulation.run(config, topology));
+
+        String metadata = Files.readString(config.runDirectory().resolve("metadata.properties"));
+        assertTrue(metadata.contains("initialStateMin=-0.05"));
+        assertTrue(metadata.contains("initialStateMax=0.05"));
+        assertTrue(OutputWriter.completed(config));
+    }
+
+    @Test
     void completedRejectsOutputsWithOldInitialRangeMetadata() throws Exception {
         Config config = Config.parse(new String[] {
             "smoke", "--topology", "complete", "--K", "0.2",

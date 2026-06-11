@@ -19,6 +19,8 @@ public record Config(
     int realizations,
     long baseSeed,
     int realizationIndex,
+    double initialStateMin,
+    double initialStateMax,
     int threads,
     boolean saveStates,
     boolean saveAdjacency,
@@ -72,6 +74,8 @@ public record Config(
             intValue(values, "realizations", 15),
             longValue(values, "base-seed", 12345L),
             intValue(values, "realization", 1),
+            doubleValue(values, "initial-state-min", -0.5),
+            doubleValue(values, "initial-state-max", 0.5),
             intValue(values, "threads", 1),
             saveStates,
             saveAdjacency,
@@ -130,6 +134,10 @@ public record Config(
         if (realizationIndex < 1) {
             throw new IllegalArgumentException("realization must be positive");
         }
+        if (!Double.isFinite(initialStateMin) || !Double.isFinite(initialStateMax)
+            || initialStateMin >= initialStateMax) {
+            throw new IllegalArgumentException("initial state range must be finite and increasing");
+        }
         if (threads < 1) {
             throw new IllegalArgumentException("threads must be positive");
         }
@@ -183,8 +191,8 @@ public record Config(
     public Config withSweepValues(String newTopology, double newK, double newP, int newRingK, int newRealization) {
         return new Config(
             mode, newTopology, n, newK, newP, newRingK, dt, totalTime, saveInterval,
-            realizations, baseSeed, newRealization, threads, saveStates, saveAdjacency, overwrite, outputDir,
-            couplingValues
+            realizations, baseSeed, newRealization, initialStateMin, initialStateMax, threads, saveStates,
+            saveAdjacency, overwrite, outputDir, couplingValues
         );
     }
 

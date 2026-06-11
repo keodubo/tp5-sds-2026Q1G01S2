@@ -84,8 +84,8 @@ public final class OutputWriter {
             && equalsProperty(properties, "realization", Integer.toString(config.realizationIndex()))
             && equalsProperty(properties, "baseSeed", Long.toString(config.baseSeed()))
             && equalsProperty(properties, "runSeed", Long.toString(config.runSeed()))
-            && equalsProperty(properties, "initialStateMin", Double.toString(FhnSimulation.INITIAL_STATE_MIN))
-            && equalsProperty(properties, "initialStateMax", Double.toString(FhnSimulation.INITIAL_STATE_MAX));
+            && equalsProperty(properties, "initialStateMin", Double.toString(config.initialStateMin()))
+            && equalsProperty(properties, "initialStateMax", Double.toString(config.initialStateMax()));
     }
 
     private static boolean equalsProperty(Properties properties, String key, String expected) {
@@ -150,8 +150,8 @@ public final class OutputWriter {
             writeProperty(writer, "realization", Integer.toString(config.realizationIndex()));
             writeProperty(writer, "baseSeed", Long.toString(config.baseSeed()));
             writeProperty(writer, "runSeed", Long.toString(config.runSeed()));
-            writeProperty(writer, "initialStateMin", Double.toString(FhnSimulation.INITIAL_STATE_MIN));
-            writeProperty(writer, "initialStateMax", Double.toString(FhnSimulation.INITIAL_STATE_MAX));
+            writeProperty(writer, "initialStateMin", Double.toString(config.initialStateMin()));
+            writeProperty(writer, "initialStateMax", Double.toString(config.initialStateMax()));
             writeProperty(writer, "saveStates", Boolean.toString(config.saveStates()));
             writeProperty(writer, "saveAdjacency", Boolean.toString(config.saveAdjacency()));
             writeProperty(writer, "usedPartialFinalStep", Boolean.toString(result.usedPartialFinalStep()));
