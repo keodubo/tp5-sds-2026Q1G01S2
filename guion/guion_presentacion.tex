@@ -1,0 +1,471 @@
+\documentclass[11pt]{article}
+
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[spanish,es-noquoting]{babel}
+\usepackage[a4paper,margin=2.2cm]{geometry}
+\usepackage{booktabs}
+\usepackage{enumitem}
+\usepackage{xcolor}
+\usepackage{tcolorbox}
+\usepackage{amsmath}
+\usepackage{fancyhdr}
+\usepackage{titlesec}
+\usepackage{hyperref}
+
+\tcbuselibrary{skins,breakable}
+
+% ---- Paleta (acorde a la presentación) ----
+\definecolor{azulOscuro}{HTML}{2E4756}
+\definecolor{azulMedio}{HTML}{3FA9F5}
+\definecolor{azulClaro}{HTML}{E8F3FC}
+\definecolor{keoColor}{HTML}{1F6FB2}
+\definecolor{nicoColor}{HTML}{E08A1E}
+\definecolor{ianColor}{HTML}{6A4FB6}
+\definecolor{grisTexto}{HTML}{444444}
+
+\hypersetup{colorlinks=true,linkcolor=azulMedio,urlcolor=azulMedio}
+
+% ---- Encabezado / pie ----
+\pagestyle{fancy}
+\fancyhf{}
+\renewcommand{\headrulewidth}{0.4pt}
+\lhead{\small\textcolor{azulOscuro}{\textbf{Guion · TP5 Dinámica Neuronal}}}
+\rhead{\small\textcolor{azulOscuro}{Grupo 01 · CS2 · 72.25 SdS}}
+\cfoot{\thepage}
+
+\titleformat{\section}{\Large\bfseries\color{azulOscuro}}{}{0pt}{}
+\titleformat{\subsection}{\large\bfseries\color{azulOscuro}}{}{0pt}{}
+
+% ---- Caja: lo que se DICE (texto a memorizar) ----
+\newtcolorbox{guion}[1][]{
+  enhanced, breakable, colback=azulClaro, colframe=azulMedio,
+  boxrule=0.6pt, arc=2pt, left=8pt, right=8pt, top=6pt, bottom=6pt,
+  fonttitle=\bfseries, #1
+}
+
+% ---- Encabezado de slide ----
+\newcommand{\slide}[3]{%
+  \vspace{6pt}%
+  \noindent{\color{azulOscuro}\rule{3.2cm}{2pt}}\\[2pt]
+  \noindent\textbf{\color{azulOscuro}#1}\hfill\textbf{\color{azulMedio}#3}\\[-2pt]
+  {\small\color{grisTexto}\itshape #2}\\[2pt]
+}
+
+% ---- Etiqueta de expositor ----
+\newcommand{\quien}[2]{\noindent\colorbox{#1}{\textcolor{white}{\textbf{\;#2\;}}}}
+
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{4pt}
+
+\begin{document}
+
+% ===================== PORTADA =====================
+\begin{center}
+  \vspace*{1.2cm}
+  {\color{azulMedio}\rule{4cm}{2.5pt}}\\[10pt]
+  {\Huge\bfseries\color{azulOscuro} Guion de presentación}\\[6pt]
+  {\LARGE\bfseries\color{azulOscuro} TP5 · Dinámica Neuronal (FitzHugh--Nagumo)}\\[14pt]
+  {\large 72.25 Simulación de Sistemas · Grupo 01 · Comisión S2}\\[24pt]
+
+  \begin{tcolorbox}[width=0.82\textwidth, colback=azulClaro, colframe=azulMedio, arc=3pt]
+  \centering\large
+  \textbf{Duración objetivo: 20 min} · 36 diapositivas · 3 expositores\\[6pt]
+  Reparto de tiempo equitativo (\textasciitilde 6 min 40 s cada uno)
+  \end{tcolorbox}
+
+  \vspace{18pt}
+  \begin{tabular}{ll}
+    \quien{keoColor}{KEO} & \normalsize Keoni Lucas Dubovitsky · slides 1--11 (Intro + Implementación + setup) \\[6pt]
+    \quien{nicoColor}{NICO} & \normalsize Nicolás Valentín Arias · slides 12--24 (Resultados: completa + aleatoria) \\[6pt]
+    \quien{ianColor}{IAN} & \normalsize Ian Franco Tognetti · slides 25--36 (Anillo + comparación + cond. inicial + conclusiones) \\
+  \end{tabular}
+\end{center}
+
+\newpage
+
+% ===================== INDICACIONES =====================
+\section*{Cómo usar este guion}
+\addcontentsline{toc}{section}{Cómo usar este guion}
+
+\begin{itemize}[leftmargin=1.4em]
+  \item Cada slide tiene: \textbf{número y título}, \textbf{tiempo objetivo} (arriba a la derecha), el \textbf{texto a decir} (caja celeste, pensado para memorizar palabra por palabra) y \textbf{notas de acción} en \textit{cursiva} (qué señalar, cuándo cambiar de slide).
+  \item El texto de las cajas es hablado y natural: se puede decir tal cual. No hace falta recitarlo literal si el sentido se mantiene, pero los \textbf{números y definiciones} sí conviene decirlos exactos.
+  \item Las transiciones entre expositores están marcadas con una línea de \textbf{relevo}. El que entra no repite lo que cerró el anterior (guía de presentaciones, punto 3.2).
+  \item Los tiempos suman 20:00. Si se atrasan, las slides de animación (13, 18, 25) y las de evolución temporal repetidas (19--22, 26--29) son las que se pueden acortar primero.
+  \item \textbf{Antes de presentar}, leer el apéndice ``Arreglos pendientes'': hay puntos del enunciado que conviene corregir en las slides para no perder nota.
+\end{itemize}
+
+% ===================== TABLA DE TIEMPOS =====================
+\subsection*{Mapa de tiempos}
+\begin{center}\small
+\begin{tabular}{@{}clcc@{}}
+\toprule
+\textbf{Expositor} & \textbf{Bloque} & \textbf{Slides} & \textbf{Tiempo} \\
+\midrule
+\quien{keoColor}{KEO}  & Apertura, modelo FHN, arquitectura, pseudocódigo, UML, observables & 1--11 & 6:40 \\
+\quien{nicoColor}{NICO} & Resultados red completa y red aleatoria & 12--24 & 6:40 \\
+\quien{ianColor}{IAN}  & Red anillo, comparación entre redes, condición inicial, conclusiones & 25--36 & 6:40 \\
+\midrule
+\multicolumn{3}{r}{\textbf{Total}} & \textbf{20:00} \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\newpage
+
+% ============================================================
+% =====================   KEO  (1-11)   ======================
+% ============================================================
+\section{\quien{keoColor}{KEO} · Introducción e implementación \hfill\normalsize\mdseries slides 1--11 · 6:40}
+
+\slide{Slide 1 — Portada: ``Dinámica Neuronal''}{Pantalla de título. Presentarse el grupo.}{0:25}
+\begin{guion}
+Buenas, somos el grupo 01. Yo soy Keo, y junto con Nico e Ian vamos a presentar el Trabajo Práctico 5 de Simulación de Sistemas. El tema es \textbf{comportamiento colectivo}, y el sistema que elegimos es la \textbf{dinámica de una red de neuronas excitables} usando el modelo de FitzHugh--Nagumo.
+\end{guion}
+\textit{Acción: avanzar a la slide 2.}
+
+\slide{Slide 2 — Sección: Introducción}{Slide divisoria, solo título.}{0:05}
+\begin{guion}
+Arrancamos con una introducción al modelo.
+\end{guion}
+
+\slide{Slide 3 — Modelo FitzHugh--Nagumo}{Las dos ecuaciones a la izquierda; el ciclo límite (v,w) a la derecha.}{1:10}
+\begin{guion}
+El FitzHugh--Nagumo es una versión simplificada del modelo de Hodgkin--Huxley: con solo dos variables captura lo esencial de una neurona, que es la \textbf{excitabilidad} y la \textbf{generación de pulsos}.
+
+Cada neurona tiene dos variables. Una \textbf{variable rápida}, $v$, que representa el \textbf{potencial de membrana}; y una \textbf{variable lenta}, $w$, de \textbf{recuperación}.
+
+En la ecuación de $v$, el término cúbico es lo que le da el comportamiento excitable, $I$ es una corriente externa que mantiene a la neurona oscilando, y el último término es el \textbf{acoplamiento}: cada neurona se compara con sus vecinas y el factor $K$ controla qué tan fuerte es esa interacción. La ecuación de $w$ es la que la trae de vuelta, más lenta, con los parámetros épsilon, $a$ y $b$.
+
+A la derecha vemos el \textbf{ciclo límite} de una neurona en el plano $v$--$w$: aislada, recorre esta órbita cerrada, es decir, dispara pulsos de forma periódica.
+\end{guion}
+\textit{Acción: señalar el término de acoplamiento $K\sum A_{ij}(v_j-v_i)$ al nombrarlo. Avanzar.}
+
+\slide{Slide 4 — Sección: Implementación}{Slide divisoria.}{0:05}
+\begin{guion}
+Veamos cómo lo llevamos a un programa.
+\end{guion}
+
+\slide{Slide 5 — Arquitectura}{Diagrama de tres módulos: Motor Java → archivos de texto → Análisis / Animación.}{1:10}
+\begin{guion}
+La arquitectura tiene tres módulos \textbf{desacoplados}. El \textbf{motor de simulación} está en Java: integra las ecuaciones y lo único que hace es \textbf{escribir archivos de texto}. Ese es el punto de desacople que pide el enunciado.
+
+El motor genera un \texttt{observables.csv} con el tiempo, el potencial medio y la dispersión; opcionalmente el estado de cada neurona, la metadata con los parámetros y la semilla, y la matriz de adyacencia.
+
+Después, de forma totalmente independiente, hay un módulo de \textbf{análisis} en Python que lee esos archivos y calcula las métricas, y un módulo de \textbf{animación}, también en Python, que consume los estados y la red para hacer los videos.
+
+La ventaja de separarlo así es que la velocidad de la animación o del post-proceso \textbf{no depende} de la velocidad de la simulación: simulamos una vez y reanalizamos las veces que queramos.
+\end{guion}
+\textit{Acción: recorrer con el dedo el flujo izquierda → centro → derecha. Avanzar.}
+
+\slide{Slide 6 — Pseudocódigo}{Pseudocódigo de \texttt{SimularFHN}, \texttt{PasoRK4} y \texttt{Guardar}.}{0:55}
+\begin{guion}
+Este es el núcleo del motor. Inicializamos el potencial y la recuperación de cada neurona de forma aleatoria, y después entramos en el bucle temporal con un \textbf{paso fijo}.
+
+Cada paso es un \textbf{Runge--Kutta de orden 4}: evaluamos las derivadas en cuatro etapas y combinamos. Elegimos RK4 porque el sistema no es conservativo y queríamos un integrador preciso y estable con un paso razonable.
+
+Cada cierto intervalo guardamos los observables: el potencial medio, la dispersión espacial y el $w$ medio. Importante: el paso de integración y el intervalo de guardado son cosas distintas, integramos fino y guardamos más espaciado.
+\end{guion}
+\textit{Acción: si alguien pregunta el dt, lo decimos en la slide 9. Avanzar.}
+
+\slide{Slide 7 — Diagrama UML}{Clases: Main, Config, Topology, FhnSimulation, OutputWriter.}{0:45}
+\begin{guion}
+En el UML se ve la separación de responsabilidades. \textbf{Main} orquesta y soporta tres modos: una corrida única, un barrido de parámetros, y un smoke test. \textbf{Config} parsea los parámetros, \textbf{valida los rangos} y genera una semilla distinta por combinación, para que cada corrida sea reproducible.
+
+\textbf{Topology} construye la matriz de conectividad según el tipo de red. \textbf{FhnSimulation} hace la integración RK4 que acabamos de ver. Y \textbf{OutputWriter} se encarga de escribir todos los archivos de texto.
+\end{guion}
+\textit{Acción: avanzar a la sección Simulaciones.}
+
+\slide{Slide 8 — Sección: Simulaciones}{Slide divisoria.}{0:05}
+\begin{guion}
+Pasamos a definir qué simulamos exactamente.
+\end{guion}
+
+\slide{Slide 9 — Parámetros de entrada}{Dos tablas: variables ($v_i$, $w_i$) y fijos ($I$, $\epsilon$, $a$, $b$).}{0:35}
+\begin{guion}
+Estos son los parámetros. Las \textbf{condiciones iniciales} de potencial y recuperación se sortean uniformemente en el intervalo de menos $0{,}5$ a $0{,}5$. Los \textbf{parámetros del modelo} son fijos: la corriente $I$ igual a $0{,}5$; épsilon $0{,}08$; $a$ igual a $0{,}7$ y $b$ igual a $0{,}8$, tal como indica el enunciado.
+
+Todas las corridas son con $N$ igual a $501$ neuronas, tiempo total $500$, y promediamos sobre $15$ realizaciones independientes.
+\end{guion}
+\textit{Acción: el rango $[-0{,}5;\,0{,}5]$ es clave; Ian lo retoma en conclusiones. Avanzar.}
+
+\slide{Slide 10 — Observables}{Definición de $\langle v(t)\rangle$ y $\sigma_v(t)$.}{0:45}
+\begin{guion}
+Definimos dos observables, ambos calculados a partir del estado directo de la simulación.
+
+El \textbf{potencial promedio de la red}, $\langle v\rangle$, es simplemente el promedio del potencial sobre las $N$ neuronas en cada instante. Nos dice si la red, en conjunto, está disparando.
+
+La \textbf{dispersión espacial}, $\sigma_v$, es el desvío estándar de los potenciales entre las neuronas en ese mismo instante. Es nuestra medida de sincronización: si $\sigma_v$ es chico, todas las neuronas tienen un potencial parecido, o sea están \textbf{sincronizadas}; si es grande, están desparramadas.
+\end{guion}
+\textit{Acción: enfatizar ``$\sigma_v$ chico = sincronizado''; es la idea que sostiene todos los resultados. Avanzar.}
+
+\slide{Slide 11 — Observaciones: las tres redes}{Tabla con las tres topologías + esquemas de red.}{0:40}
+\begin{guion}
+Estudiamos la misma dinámica sobre \textbf{tres tipos de red}. La \textbf{totalmente conectada}, donde cada neurona ve a todas las demás. La \textbf{aleatoria}, donde cada par está conectado con probabilidad $p$. Y la de \textbf{anillo}, donde cada neurona se conecta solo con sus $k$ vecinos a cada lado, con índices periódicos.
+
+Abajo se ve el esquema de cada una: la completa es una maraña total, la aleatoria tiene pocos enlaces salteados y el anillo es regular y local. Con esto le paso a Nico para los resultados.
+\end{guion}
+
+\vspace{8pt}
+\hrulefill\\
+\quien{nicoColor}{RELEVO → NICO} \textit{\quad Nico toma desde la slide 12. No re-explica las redes; arranca en resultados.}
+
+% ============================================================
+% =====================   NICO  (12-24)  =====================
+% ============================================================
+\newpage
+\section{\quien{nicoColor}{NICO} · Resultados: red completa y aleatoria \hfill\normalsize\mdseries slides 12--24 · 6:40}
+
+\slide{Slide 12 — Sección: Resultados}{Slide divisoria.}{0:05}
+\begin{guion}
+Vamos a los resultados, empezando por la red totalmente conectada.
+\end{guion}
+
+\slide{Slide 13 — Red completa · Animaciones}{Dos fotogramas: $K=0$ y $K=0{,}1$, anillo de neuronas coloreadas por potencial.}{0:40}
+\begin{guion}
+Primero, para situar la dinámica, dos animaciones de la red completa con $N$ igual a $501$. A la izquierda, \textbf{sin acoplamiento}, $K$ igual a cero: cada neurona hace su propio pulso, los colores están desordenados, no hay coherencia. A la derecha, con $K$ igual a $0{,}1$: las neuronas se alinean y prácticamente todas comparten el mismo potencial al mismo tiempo, se ve un color uniforme que late en conjunto.
+\end{guion}
+\textit{Acción: en vivo, reproducir los dos videos embebidos. \textbf{En el PDF falta el link a YouTube debajo de cada fotograma: ver apéndice.} Avanzar.}
+
+\slide{Slide 14 — Red completa · Evolución de $v(t)$}{$\langle v\rangle$ vs $t$ para $K=0,10^{-3},10^{-2},10^{-1}$.}{0:45}
+\begin{guion}
+Acá está el potencial medio en función del tiempo, para distintos valores de $K$. Se ve la forma típica del FitzHugh--Nagumo: subidas rápidas, los disparos, y caídas lentas de recuperación.
+
+Lo importante es comparar la curva azul, sin acople, contra las otras: con acoplamiento las oscilaciones son más limpias y de mayor amplitud, porque las neuronas disparan juntas y el promedio no se les ``promedia a cero''. Esta es una evolución típica; el resultado cuantitativo viene en las próximas slides.
+\end{guion}
+\textit{Acción: avanzar.}
+
+\slide{Slide 15 — Red completa · Evolución de $\sigma_v(t)$}{$\sigma_v$ vs $t$; umbral $\sigma_v=10^{-2}$ punteado.}{0:50}
+\begin{guion}
+Esta es la slide que valida nuestro criterio. Es la \textbf{dispersión} en función del tiempo. La curva azul, $K$ igual a cero, oscila fuerte y nunca baja: la red \textbf{no sincroniza}. En cambio, apenas ponemos acople, aunque sea $10^{-3}$, la dispersión \textbf{cae a cero} y se queda ahí.
+
+Definimos un \textbf{umbral} de sincronización en $\sigma_v$ igual a $10^{-2}$, la línea punteada. Decimos que la red está sincronizada cuando la dispersión baja de ese umbral y se mantiene. El \textbf{tiempo de sincronización} es el instante en que cruza esa línea por última vez.
+\end{guion}
+\textit{Acción: señalar la línea punteada del umbral. Avanzar.}
+
+\slide{Slide 16 — Red completa · Estado estacionario}{$\sigma_v$ estacionaria vs $K$ (escala log en $K$); línea $K=0$: 0.87.}{0:45}
+\begin{guion}
+Ahora el resultado definitivo: la \textbf{dispersión estacionaria} en función de $K$, en escala logarítmica. La línea roja de arriba es el caso sin acople, que se queda en $0{,}87$. En cuanto $K$ es mayor que cero, todos los puntos caen a prácticamente cero.
+
+O sea: en la red completa, cualquier acople, por más chico que sea dentro del rango que probamos, alcanza para sincronizar. El umbral crítico es \textbf{menor a $10^{-4}$}.
+\end{guion}
+\textit{Acción: avanzar.}
+
+\slide{Slide 17 — Red completa · Tiempo de sincronización vs $K$}{$t_{\text{sync}}$ vs $K$, escala log en $K$.}{0:50}
+\begin{guion}
+Y este es el tiempo que tarda en sincronizar según $K$. Con el acople más chico que probamos, $10^{-4}$, tarda casi toda la simulación, unos $487$ de tiempo. Con $10^{-3}$ ya baja a alrededor de $24$, y de $0{,}1$ en adelante es \textbf{prácticamente instantáneo}.
+
+La lectura es: no solo importa \textit{si} sincroniza, sino \textit{qué tan rápido}; y lejos del umbral crítico la sincronización aparece enseguida. Con esto cerramos red completa.
+\end{guion}
+\textit{Acción: avanzar a red aleatoria.}
+
+\slide{Slide 18 — Red aleatoria · Animaciones}{Fotogramas $p=0{,}01$ y $p=0{,}1$, con $K=0{,}1$.}{0:30}
+\begin{guion}
+Pasamos a la red aleatoria, donde la conexión entre neuronas existe con probabilidad $p$. Acá dos casos con $K$ fijo en $0{,}1$: a la izquierda $p$ igual a $0{,}01$, una red dispersa; a la derecha $p$ igual a $0{,}1$, más densa. Se intuye que cuanta más conexión, más fácil se ordena.
+\end{guion}
+\textit{Acción: reproducir videos en vivo. \textbf{Falta link en el PDF.} Avanzar.}
+
+\slide{Slide 19 — Red aleatoria · Evolución de $v(p)$}{$\langle v\rangle$ vs $t$ para $p=10^{-4}\dots10^{-1}$, con $K=0{,}1$.}{0:30}
+\begin{guion}
+Fijando $K$ en $0{,}1$ y variando $p$: el potencial medio sigue oscilando para todos los $p$. Como antes, esta evolución es solo para validar; lo que caracteriza el proceso es la dispersión, que vemos ahora.
+\end{guion}
+\textit{Acción: avanzar.}
+
+\slide{Slide 20 — Red aleatoria · Evolución de $\sigma_v(p)$}{$\sigma_v$ vs $t$ para distintos $p$; umbral punteado.}{0:35}
+\begin{guion}
+Acá está la diferencia. Con $p$ alto, $0{,}1$, la dispersión cae bajo el umbral: \textbf{sincroniza}. Con $p$ intermedio, $10^{-2}$, queda en una zona baja pero oscilando. Y con $p$ chico, $10^{-4}$ y $10^{-3}$, la dispersión se queda arriba: \textbf{no sincroniza} en el tiempo simulado, aun con el mismo $K$. La conectividad, sola, decide.
+\end{guion}
+\textit{Acción: avanzar.}
+
+\slide{Slide 21 — Red aleatoria · $v$ con distintos $K$}{$\langle v\rangle$ vs $t$ variando $K$.}{0:25}
+\begin{guion}
+Ahora barremos $K$ a $p$ fijo. El potencial medio: las curvas se separan según el acople, pero igual que antes esto es para validar, no es el resultado final.
+\end{guion}
+\textit{Acción: avanzar.}
+
+\slide{Slide 22 — Red aleatoria · $\sigma_v$ con distintos $K$}{$\sigma_v$ vs $t$ variando $K$; umbral punteado.}{0:30}
+\begin{guion}
+Y la dispersión variando $K$: se ve el mismo patrón que en la red completa, pero corrido. Hace falta un poco más de acople para tirar la dispersión abajo del umbral, porque la red está menos conectada. Esto nos lleva al mapa que resume todo.
+\end{guion}
+\textit{Acción: avanzar.}
+
+\slide{Slide 23 — Red aleatoria · Dispersión en función de $p$ y $K$}{Mapa de calor $\sigma_v$ estacionaria en el plano $(K,p)$.}{0:35}
+\begin{guion}
+Este mapa de calor junta los dos parámetros: $K$ en horizontal, $p$ en vertical, y el color es la dispersión estacionaria. \textbf{Amarillo} es dispersión alta, no sincroniza; \textbf{violeta} es dispersión baja, sincroniza.
+
+La región sincronizada está arriba a la derecha: hace falta combinar suficiente \textbf{acople} y suficiente \textbf{conectividad}. Si la red es muy dispersa, ni subiendo $K$ alcanza.
+\end{guion}
+\textit{Acción: recorrer la diagonal de la transición con el dedo. Avanzar.}
+
+\slide{Slide 24 — Red aleatoria · Sincronización de $p$ y $K$}{$\sigma_v$ estacionaria vs $p$, con barras de error.}{0:30}
+\begin{guion}
+Y este es el corte cuantitativo con \textbf{barras de error}: la dispersión estacionaria en función de $p$. Se ve una transición bastante marcada alrededor de $p$ igual a $10^{-2}$: por debajo, la red queda desincronizada; por encima, colapsa a sincronización. Con esto le dejo a Ian la red anillo y el cierre.
+\end{guion}
+
+\vspace{8pt}
+\hrulefill\\
+\quien{ianColor}{RELEVO → IAN} \textit{\quad Ian toma desde la slide 25 con la red anillo.}
+
+% ============================================================
+% =====================   IAN  (25-35)   =====================
+% ============================================================
+\newpage
+\section{\quien{ianColor}{IAN} · Anillo, comparación y conclusiones \hfill\normalsize\mdseries slides 25--36 · 6:40}
+
+\textit{\small Antes de presentar, repasar el apéndice de preguntas frecuentes (defensa).}
+
+\slide{Slide 25 — Red anillo · Animaciones}{Fotogramas $k=1$ y $k=10$, con $K=0{,}1$.}{0:40}
+\begin{guion}
+Cierro con la red anillo, donde cada neurona se conecta solo con sus $k$ vecinos a cada lado. Dos casos con $K$ fijo en $0{,}1$: a la izquierda $k$ igual a $1$, conectividad mínima, la red \textbf{no llega a sincronizar}; a la derecha $k$ igual a $10$, donde sincroniza rápido. Es el caso más extremo de cuánto pesa la estructura de la red: con el mismo acople, solo cambiando cuántos vecinos ve cada neurona, pasamos de no sincronizar a hacerlo enseguida.
+\end{guion}
+\textit{Acción: reproducir videos en vivo. \textbf{Falta link en el PDF.} Avanzar.}
+
+\slide{Slide 26 — Red anillo · Evolución de $v(k)$}{$\langle v\rangle$ vs $t$ para $k=1,2,4,10$.}{0:20}
+\begin{guion}
+Fijando $K$ en $0{,}1$ y variando la vecindad: el potencial medio oscila en todos los casos, las curvas casi se superponen. Como en las redes anteriores, lo informativo está en la dispersión.
+\end{guion}
+\textit{Acción: avanzar.}
+
+\slide{Slide 27 — Red anillo · Evolución de $\sigma_v(k)$}{$\sigma_v$ vs $t$ para distintos $k$; umbral punteado.}{0:40}
+\begin{guion}
+Acá sí se separa todo. Con $k$ igual a $1$, la curva azul, la dispersión se queda alta: \textbf{no sincroniza}. A medida que sumamos vecinos, $k$ igual a $2$, $4$, $10$, la dispersión baja cada vez más rápido bajo el umbral. O sea, más vecinos equivale a sincronización más fácil y más temprana, con exactamente el mismo $K$.
+\end{guion}
+\textit{Acción: avanzar.}
+
+\slide{Slide 28 — Red anillo · $v$ con distintos $K$}{$\langle v\rangle$ vs $t$ variando $K$, a $k$ fijo.}{0:20}
+\begin{guion}
+Ahora a vecindad fija barremos el acople. El potencial medio: las curvas se ordenan según $K$. Validación, igual que antes; lo que importa es la dispersión que sigue.
+\end{guion}
+\textit{Acción: avanzar.}
+
+\slide{Slide 29 — Red anillo · $\sigma_v$ con distintos $K$}{$\sigma_v$ vs $t$ variando $K$; umbral punteado.}{0:35}
+\begin{guion}
+La dispersión variando $K$ en el anillo: el patrón se repite pero \textbf{desplazado hacia acoples más grandes}. En esta red, que es la menos conectada, hace falta el $K$ más alto de las tres para sincronizar. Lo resumimos en el mapa.
+\end{guion}
+\textit{Acción: avanzar.}
+
+\slide{Slide 30 — Red anillo · Dispersión en función de $k$ y $K$}{Mapa de calor $\sigma_v$ estacionaria en $(K,k)$.}{0:40}
+\begin{guion}
+El mapa de calor del anillo: acople en horizontal, número de vecinos en vertical, color es la dispersión estacionaria. Misma lectura que antes: amarillo no sincroniza, violeta sincroniza. La región sincronizada crece hacia la derecha y hacia arriba, o sea con más acople \textbf{y} más vecinos. Se ve clarísimo que para $k$ igual a $1$, abajo de todo, casi no hay zona violeta: necesita muchísimo acople.
+\end{guion}
+\textit{Acción: avanzar.}
+
+\slide{Slide 31 — Red anillo · Sincronización de $k$ y $K$}{$\sigma_v$ estacionaria vs $k$, con barras de error.}{0:40}
+\begin{guion}
+El corte cuantitativo con barras de error: dispersión estacionaria en función del número de vecinos. Con $k$ igual a $1$ la dispersión es alta, alrededor de $0{,}4$, y con barra de error grande, porque algunas realizaciones sincronizan y otras no. A partir de $k$ igual a $3$ ya cae a casi cero y se estabiliza. Tres vecinos a cada lado alcanzan para sincronizar de forma robusta.
+\end{guion}
+\textit{Acción: avanzar a la comparación. \textbf{Esta es la slide central del cierre.}}
+
+\slide{Slide 32 — Comparación: tiempo al estacionario entre redes}{$t_{\text{sync}}$ vs $K$ para completa, aleatoria ($p=0{,}1$) y anillo ($k=10$).}{1:00}
+\begin{guion}
+Esta es la síntesis de todo el trabajo: el tiempo de sincronización en función de $K$, superponiendo las tres redes.
+
+La \textbf{azul} es la completa: sincroniza con el acople más chico de todos, ya a la izquierda del gráfico. La \textbf{naranja} es la aleatoria densa, con $p$ igual a $0{,}1$: necesita un poco más de acople, la curva está corrida a la derecha. Y la \textbf{verde} es el anillo con $k$ igual a $10$: es la que más acople necesita y la que más tarda, su curva está mucho más a la derecha y con barras de error grandes.
+
+La conclusión que se lee directamente del gráfico es que, para un mismo $K$, el \textbf{orden de facilidad para sincronizar} es: completa, después aleatoria, y por último anillo. Es decir, \textbf{cuanto más conectada y menos local es la red, más fácil y más rápido sincroniza}. La estructura de la red importa tanto como la fuerza del acople.
+\end{guion}
+\textit{Acción: tocar cada curva al nombrarla. Avanzar al experimento de condición inicial.}
+
+\slide{Slide 33 — Sincronización inducida por la condición inicial}{$\sigma_v$ vs $t$ con $K=0$; dos curvas: CI angosta $[-0{,}05;0{,}05]$ y CI ancha $[-0{,}5;0{,}5]$.}{0:45}
+\begin{guion}
+Un último resultado, que es el que sostiene nuestra tercera conclusión. Acá está la dispersión en función del tiempo para la red completa \textbf{sin acople}, $K$ igual a cero, comparando las dos condiciones iniciales que probamos. La curva \textbf{azul} es el rango angosto, de menos $0{,}05$ a $0{,}05$; la \textbf{naranja} es el rango ancho, de menos $0{,}5$ a $0{,}5$.
+
+Con el rango angosto la dispersión arranca en $0{,}028$ y se queda \textbf{pegada al piso} toda la simulación: el criterio la marca como sincronizada en las \textbf{$15$ de $15$} corridas, aunque no hay ningún acople. Con el rango ancho arranca diez veces más grande, en $0{,}28$, y se queda oscilando arriba, cerca de $0{,}87$: \textbf{no sincroniza en ninguna} de las $15$.
+
+O sea: la ``sincronización'' que se veía con el rango angosto era un \textbf{artefacto} de arrancar a todas las neuronas casi iguales, no una sincronización producida por la red. Por eso usamos el rango ancho en todo el resto del trabajo.
+\end{guion}
+\textit{Acción: señalar la curva azul pegada al piso y la naranja oscilando arriba. Avanzar a la sección Conclusiones.}
+
+\slide{Slide 34 — Sección: Conclusiones}{Slide divisoria.}{0:05}
+\begin{guion}
+Con todo esto, las conclusiones.
+\end{guion}
+
+\slide{Slide 35 — Conclusiones}{Tres conclusiones numeradas.}{1:05}
+\begin{guion}
+Tres conclusiones, todas apoyadas en los resultados que mostramos.
+
+\textbf{Primera}: la sincronización tiene un \textbf{umbral de acople}, y lejos de ese umbral aparece muy rápido. Lo vimos en la red completa: con el acople más chico tardaba casi toda la simulación, y con un poco más era prácticamente inmediata.
+
+\textbf{Segunda}, y es la central: el \textbf{acople crítico no es único, depende fuertemente de la conectividad}. La red completa sincroniza con un $K$ crítico menor a $10^{-4}$; la aleatoria densa necesita del orden de $3$ por $10^{-4}$; y el anillo va desde alrededor de $3$ por $10^{-3}$ con diez vecinos hasta casi $0{,}5$ con un solo vecino. La misma dinámica, sobre redes distintas, tiene umbrales que se mueven varios órdenes de magnitud.
+
+\textbf{Tercera}: cambiar las condiciones iniciales fue \textbf{necesario para no forzar una sincronización artificial}. Como acabamos de ver en la slide anterior, con el rango angosto las neuronas arrancaban casi iguales y el sistema parecía sincronizado aunque no hubiera acople. Al abrir el rango a menos $0{,}5$ y $0{,}5$, las trayectorias arrancan bien separadas, y entonces la sincronización que medimos se debe genuinamente al acople y a la topología, no a la condición inicial.
+\end{guion}
+\textit{Acción: si preguntan por la tercera, ver apéndice. Avanzar.}
+
+\slide{Slide 36 — Muchas gracias}{Slide de cierre.}{0:05}
+\begin{guion}
+Eso es todo, muchas gracias. Quedamos para las preguntas.
+\end{guion}
+
+\vspace{10pt}
+\begin{tcolorbox}[colback=azulClaro, colframe=ianColor, arc=2pt, title=\textbf{Reparto de preguntas (guía 3.2)}]
+\small Las preguntas se responden \textbf{en orden} y cada uno toma las de su bloque: Keo (modelo, arquitectura, integrador, UML), Nico (red completa y aleatoria), Ian (anillo, comparación entre redes, conclusiones y condiciones iniciales). Si una pregunta cruza bloques, responde quien expuso esa slide.
+\end{tcolorbox}
+
+% ============================================================
+% =====================   APÉNDICES   ========================
+% ============================================================
+\newpage
+\section*{Apéndice A · Preguntas frecuentes (defensa)}
+\addcontentsline{toc}{section}{Apéndice A · Preguntas frecuentes}
+
+\begin{tcolorbox}[colback=white,colframe=ianColor,title=\textbf{¿Por qué cambiaron las condiciones iniciales si el enunciado decía $[-0{,}05;\,0{,}05]$?} (Ian)]
+\small
+Fue una \textbf{indicación expresa del profesor} (del 7 de junio) que reemplaza el rango del enunciado. El motivo es físico-estadístico: el FitzHugh--Nagumo ya tiene una dinámica oscilatoria propia sin acople. Si todas las neuronas arrancan en un entorno muy chico del mismo punto, siguen trayectorias casi idénticas aunque $K=0$, y el criterio de sincronización daba positivo sin que la red estuviera produciendo nada.
+
+Cuantitativamente: para una uniforme $U[-a,a]$, el desvío inicial esperado es $a/\sqrt{3}$. Con $a=0{,}05$ da $\sigma_v(0)\approx 0{,}029$; con $a=0{,}5$ da $\approx 0{,}289$, diez veces más. Con el rango angosto, la red completa sin acople ``sincronizaba'' en 15 de 15 corridas; con el rango ancho, sincroniza 0 de 15 y queda con dispersión estacionaria $\approx 0{,}87$, que es lo esperable sin acople. Por eso el rango ancho es el que permite atribuir la sincronización al acople y a la topología.
+\end{tcolorbox}
+
+\begin{tcolorbox}[colback=white,colframe=keoColor,title=\textbf{¿Por qué RK4 y no Euler / Verlet? ¿Cómo eligieron el dt?} (Keo)]
+\small
+RK4 porque el sistema \textbf{no es conservativo} (no aplica Verlet, que es para sistemas hamiltonianos) y queríamos error de truncamiento bajo con un paso grande. El paso es \textbf{fijo e intrínseco}, como pide el enunciado. El criterio para fijarlo es reducir el $dt$ hasta que los observables cambien menos que una tolerancia aceptable; las corridas finales usan $dt = 0{,}005$.
+\end{tcolorbox}
+
+\begin{tcolorbox}[colback=white,colframe=nicoColor,title=\textbf{¿Por qué $\sigma_v$ y no el parámetro de orden de Kuramoto?} (Nico)]
+\small Porque en FitzHugh--Nagumo la neurona no es un oscilador de fase pura: tiene amplitud. El observable natural de coherencia es la \textbf{dispersión del potencial entre neuronas}. Si todas comparten el mismo $v(t)$, $\sigma_v\to 0$; si están desparramadas, $\sigma_v$ es grande. El enunciado define exactamente este observable para el Sistema 2.
+\end{tcolorbox}
+
+\begin{tcolorbox}[colback=white,colframe=ianColor,title=\textbf{¿Cómo definieron el tiempo de sincronización?} (Ian / Nico)]
+\small Una corrida está sincronizada si $\sigma_v(t)\le 10^{-2}$ \textbf{y se mantiene} por debajo hasta el final. El tiempo de sincronización es el último instante en que la dispersión cruza ese umbral hacia abajo. El $K$ crítico es el primer $K$ donde al menos la mitad de las 15 realizaciones sincronizan.
+\end{tcolorbox}
+
+\newpage
+\section*{Apéndice B · Arreglos pendientes antes de entregar (sidequest)}
+\addcontentsline{toc}{section}{Apéndice B · Arreglos pendientes}
+
+\textit{\small Revisión del paquete contra el enunciado (\texttt{docs/TP5\_Enunciado.pdf}) y la guía de presentaciones. Ordenado por prioridad.}
+
+\begin{tcolorbox}[colback=white,colframe=red!70!black,title=\textbf{CRÍTICO · Faltan los links a las animaciones}]
+\small
+El enunciado (punto a) y la guía (pág. 3) exigen que el PDF tenga, debajo de cada fotograma de animación, un \textbf{link explícito a YouTube o Vimeo}. Las slides 13, 18 y 25 tienen el fotograma pero \textbf{ningún link} (verificado: el PDF no contiene ninguna URL). Sin esto, las animaciones se consideran no entregadas. \textbf{Acción}: subir los videos y escribir el link visible bajo cada fotograma.
+\end{tcolorbox}
+
+\begin{tcolorbox}[colback=white,colframe=red!70!black,title=\textbf{ALTO · Faltan dos mapas 2D de tiempo de sincronización}]
+\small
+El enunciado pide, para la red aleatoria y para el anillo, \textbf{dos} representaciones 2D: una de dispersión y \textbf{otra del tiempo de sincronización}. Están las de dispersión (slides 23 y 30) pero \textbf{faltan} los mapas de $t_{\text{sync}}$ en función de $(p,K)$ y de $(k,K)$. La slide 32 compara tiempos entre redes, pero no reemplaza a esos dos mapas. \textbf{Acción}: agregar dos heatmaps de tiempo de sincronización.
+\end{tcolorbox}
+
+\begin{tcolorbox}[colback=white,colframe=green!55!black,title=\textbf{RESUELTO · La conclusión 3 ya tiene figura de respaldo}]
+\small
+Se agregó la \textbf{slide 33}, ``Sincronización inducida por la condición inicial'': $\sigma_v(t)$ con $K=0$ para los dos rangos de condición inicial. Datos medidos (15 realizaciones, red completa, $K=0$): $\sigma_v(0)=2{,}8\times10^{-2}$ y sincronización $15/15$ con el rango angosto; $\sigma_v(0)=2{,}8\times10^{-1}$, dispersión estacionaria $\approx 0{,}87$ y sincronización $0/15$ con el rango ancho. La conclusión 3 queda probada por un resultado mostrado, en regla con la guía 2.5.
+\end{tcolorbox}
+
+\begin{tcolorbox}[colback=white,colframe=gray!55!black,title=\textbf{Desestimadas por decisión del grupo}]
+\small
+El grupo optó por no abordar el resto de las observaciones de esta revisión. Se dejan registradas:
+\begin{itemize}[leftmargin=1.2em,nosep]
+  \item \textbf{Links a animaciones} (slides 13, 18, 25): el PDF no incluye URLs a YouTube/Vimeo. Es el punto de mayor impacto en la nota; en la defensa oral las animaciones van embebidas, pero el PDF entregable debería llevar el link visible.
+  \item \textbf{Mapas 2D de tiempo de sincronización} en $(p,K)$ y $(k,K)$: el enunciado los pide además de los de dispersión (slides 23 y 30).
+  \item \textbf{Barras de error} en las slides 16 y 17 (red completa).
+  \item \textbf{Estética}: título interno en la slide 25, fotogramas en $t=0$, ejes de heatmaps con símbolos.
+\end{itemize}
+\end{tcolorbox}
+
+\begin{tcolorbox}[colback=white,colframe=green!55!black,title=\textbf{OK · Lo que sí cumple}]
+\small
+$N=501>500$; 15 realizaciones $>10$; $p$ con 10 valores log en $[10^{-4},10^{-1}]$; $k\in[1,10]$; $K\in[0,1]$; parámetros $I,\epsilon,a,b$ correctos; condiciones iniciales $[-0{,}5;0{,}5]$ validadas por el profesor; diapositivas numeradas; slides de sección sin contenido; Introducción $\le 3$ slides; Conclusiones en 1 slide; cierre sin la palabra ``preguntas''; motor separado de análisis y animación; salida en archivos de texto; nombre de archivo correcto. \textbf{Código del motor}: 34,5 kB sin comprimir, pero \textbf{8,4 kB comprimido} (zip), por debajo del límite de 20 kB; entregar comprimido.
+\end{tcolorbox}
+
+\end{document}
